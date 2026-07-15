@@ -188,7 +188,7 @@ void DisplayController::drawPad(uint8_t index, bool pressed)
 
     int32_t x = PAD_GAP + index * (padWidth + PAD_GAP);
 
-    display.fillRoundRect(x, PAD_Y, padWidth, PAD_HEIGHT, 6, pressed ? TFT_GREEN : TFT_DARKGREY);
+    display.fillRoundRect(x, PAD_Y, padWidth, PAD_HEIGHT, 6, pressed ? TFT_WHITE : TFT_DARKGREY);
 
     display.setTextSize(2);
 
@@ -226,8 +226,7 @@ void DisplayController::showBattery(uint32_t milliVolts)
     int32_t y = TITLE_Y + 2;
 
     // Anzeigebereich löschen (Symbol + Text links davon)
-    display.fillRect(x - 46, y - 2, 46 + BAT_WIDTH + BAT_NUB + BAT_MARGIN, BAT_HEIGHT + 4,
-                     TFT_BLACK);
+    display.fillRect(x - 46, y - 2, 46 + BAT_WIDTH + BAT_NUB + BAT_MARGIN, BAT_HEIGHT + 4, TFT_BLACK);
 
     // Gehäuse mit Kontakt-Nase
     display.drawRect(x, y, BAT_WIDTH, BAT_HEIGHT, TFT_WHITE);
@@ -280,19 +279,16 @@ void DisplayController::showStatus(bool ble, bool wifi, bool rtp)
 
     clearStatusLine();
 
-    display.setTextSize(2);
+    display.setTextSize(1.5);
 
     display.setTextDatum(textdatum_t::top_left);
 
     display.setTextColor(ble ? TFT_CYAN : TFT_DARKGREY);
-
     display.drawString("BLE", 10, STATUS_Y);
 
     display.setTextColor(wifi ? TFT_YELLOW : TFT_DARKGREY);
-
-    display.drawString("WLAN", 70, STATUS_Y);
+    display.drawString("WLAN", 50, STATUS_Y);
 
     display.setTextColor(rtp ? TFT_GREEN : TFT_DARKGREY);
-
-    display.drawString("RTP", 150, STATUS_Y);
+    display.drawString("RTP", 100, STATUS_Y);
 }
