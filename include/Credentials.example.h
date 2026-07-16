@@ -4,5 +4,8 @@
 // Diese Datei nach include/Credentials.h kopieren und ausfüllen.
 // Credentials.h ist per .gitignore vom Repository ausgeschlossen.
 
-constexpr char WIFI_SSID[]     = "DEIN-WLAN";
-constexpr char WIFI_PASSWORD[] = "DEIN-PASSWORT";
+// Leere SSID ("") = keine einkompilierten Zugangsdaten: das Gerät
+// nutzt die im Flash gespeicherten Daten aus dem Setup-Portal.
+// Eine hier eingetragene SSID hat Vorrang vor dem Portal.
+constexpr char WIFI_SSID[]     = "";
+constexpr char WIFI_PASSWORD[] = "";

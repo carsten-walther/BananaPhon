@@ -22,6 +22,10 @@ Pads, den Verbindungsstatus und den Batteriestand.
   Fingerspitze; per Peak-Fenster (~10 ms) wird der Spitzenwert des
   Anschlags erfasst
 - **BLE-MIDI**: erscheint als Bluetooth-MIDI-Gerät (macOS, iOS, Windows 10+)
+- **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
+  öffnet das Gerät ein Captive Portal (AP „Gemuese-MIDI-Device",
+  http://192.168.4.1) — dort eingetragene Zugangsdaten überleben
+  Neustarts; BLE-MIDI läuft währenddessen weiter
 - **RTP-MIDI / AppleMIDI** über WLAN inkl. Bonjour/mDNS-Discovery:
   erscheint im Audio-MIDI-Setup (macOS) bzw. in [rtpMIDI](https://www.tobias-erichsen.de/software/rtpmidi.html) (Windows)
 - **USB-Host-MIDI** (optional): ein externes MIDI-Gerät kann an den
@@ -66,7 +70,8 @@ cd Gemuese-MIDI-Device
 
 # WLAN-Zugangsdaten anlegen (bleiben lokal, sind gitignoriert)
 cp include/Credentials.example.h include/Credentials.h
-# → include/Credentials.h ausfüllen
+# → include/Credentials.h ausfüllen — oder SSID leer ("") lassen und
+#   das WLAN später bequem über das Setup-Portal einrichten
 
 # Bauen und flashen
 pio run -t upload
@@ -141,10 +146,22 @@ pio check            # Statische Analyse (cppcheck)
 pio run -t compiledb # compile_commands.json für clangd erzeugen
 ```
 
+### WLAN-Setup-Portal
+
+Ist keine SSID einkompiliert oder schlägt die Verbindung 30 Sekunden
+lang fehl, spannt das Gerät einen Access Point auf und zeigt **SETUP**
+in der Statuszeile. Dann: mit dem WLAN „Gemuese-MIDI-Device" verbinden,
+http://192.168.4.1 öffnen, eigenes WLAN auswählen und Passwort
+eintragen. Die Daten landen im Flash des ESP32 — beim nächsten Start
+verbindet sich das Gerät direkt. Eine in `Credentials.h` eingetragene
+SSID hat immer Vorrang vor den Portal-Daten. Abschaltbar über
+`ENABLE_WIFI_PORTAL` in `Config.h`.
+
 Verwendete Bibliotheken:
 [ESP32_Host_MIDI](https://github.com/sauloverissimo/ESP32_Host_MIDI),
 [LovyanGFX](https://github.com/lovyan03/LovyanGFX),
-[AppleMIDI](https://github.com/lathoub/Arduino-AppleMIDI-Library)
+[AppleMIDI](https://github.com/lathoub/Arduino-AppleMIDI-Library),
+[WiFiManager](https://github.com/tzapu/WiFiManager)
 
 ## Lizenz
 

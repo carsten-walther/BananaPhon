@@ -202,7 +202,7 @@ void DisplayController::begin()
 
     display.setTextColor(TFT_WHITE);
 
-    display.drawString("Gemuese-MIDI-Device", 10, TITLE_Y);
+    display.drawString("MIDI-Device", 10, TITLE_Y);
 }
 
 void DisplayController::showCalibrating()
@@ -400,16 +400,18 @@ void DisplayController::showBattery(uint32_t milliVolts)
     }
 }
 
-void DisplayController::showStatus(bool ble, bool wifi, bool rtp)
+void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal)
 {
-    if (_statusDrawn && ble == _lastBle && wifi == _lastWifi && rtp == _lastRtp)
+    if (_statusDrawn && ble == _lastBle && wifi == _lastWifi && rtp == _lastRtp &&
+        portal == _lastPortal)
     {
         return;
     }
 
-    _lastBle  = ble;
-    _lastWifi = wifi;
-    _lastRtp  = rtp;
+    _lastBle    = ble;
+    _lastWifi   = wifi;
+    _lastRtp    = rtp;
+    _lastPortal = portal;
 
     _statusDrawn = true;
 
@@ -427,4 +429,11 @@ void DisplayController::showStatus(bool ble, bool wifi, bool rtp)
 
     display.setTextColor(rtp ? TFT_GREEN : TFT_DARKGREY);
     display.drawString("RTP", 100, STATUS_Y);
+
+    // Nur sichtbar, solange das WLAN-Setup-Portal offen ist
+    if (portal)
+    {
+        display.setTextColor(TFT_MAGENTA);
+        display.drawString("SETUP", 140, STATUS_Y);
+    }
 }

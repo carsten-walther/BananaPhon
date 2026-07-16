@@ -27,8 +27,9 @@ public:
     // VELOCITY_PEAK_FALL_INTERVAL_MS getaktet, sonst ein No-Op).
     void updatePeaks();
 
-    // Aktualisiert die Statuszeile; zeichnet nur bei Änderung neu
-    void showStatus(bool ble, bool wifi, bool rtp);
+    // Aktualisiert die Statuszeile; zeichnet nur bei Änderung neu.
+    // `portal` = WLAN-Setup-Portal aktiv (zeigt "SETUP" an).
+    void showStatus(bool ble, bool wifi, bool rtp, bool portal = false);
 
     // Batterieanzeige oben rechts; zeichnet nur bei Änderung neu.
     // milliVolts: Batteriespannung (bereits mit Spannungsteiler
@@ -36,9 +37,10 @@ public:
     void showBattery(uint32_t milliVolts);
 
 private:
-    bool _lastBle  = false;
-    bool _lastWifi = false;
-    bool _lastRtp  = false;
+    bool _lastBle    = false;
+    bool _lastWifi   = false;
+    bool _lastRtp    = false;
+    bool _lastPortal = false;
 
     bool _statusDrawn = false;
 

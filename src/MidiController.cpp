@@ -3,6 +3,7 @@
 #include "Config.h"
 
 #include <WiFi.h>
+#include <WiFiManager.h>
 
 #include <ESP32_Host_MIDI.h>
 #include <BLEConnection.h>
@@ -21,6 +22,11 @@ static RTPMIDIConnection rtpMIDI;
 static USBConnection usbMIDI;
 
 static bool rtpStarted = false;
+
+// WLAN-Setup-Portal (siehe Config.h)
+static WiFiManager wifiManager;
+static bool portalActive      = false;
+static uint32_t wifiStartedAt = 0;
 
 // Startet RTP-MIDI, sobald WLAN verbunden ist (auch nachträglich,
 // falls das WLAN beim Boot noch nicht erreichbar war).
@@ -80,7 +86,18 @@ void MidiController::begin()
 
         WiFi.setAutoReconnect(true);
 
-        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+        if (WIFI_SSID[0] != '\0')
+        {
+            // Einkompilierte Zugangsdaten haben Vorrang
+            WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+        }
+        else
+        {
+            // Leere SSID: im Flash gespeicherte Daten (Setup-Portal)
+            WiFi.begin();
+        }
+
+        wifiStartedAt = millis();
 
 
         Serial.println("WLAN verbindet...");
@@ -125,6 +142,35 @@ void MidiController::update()
             }
         }
 
+        // Setup-Portal: kommt binnen WIFI_PORTAL_AFTER_MS keine
+        // Verbindung zustande, Access Point mit Captive Portal öffnen.
+        // Nicht-blockierend — BLE-MIDI und Pads laufen weiter.
+        if (ENABLE_WIFI_PORTAL && !portalActive && WiFi.status() != WL_CONNECTED &&
+            millis() - wifiStartedAt > WIFI_PORTAL_AFTER_MS)
+        {
+            wifiManager.setConfigPortalBlocking(false);
+
+            wifiManager.startConfigPortal(MIDI_DEVICE_NAME);
+
+            portalActive = true;
+
+            Serial.print("WLAN-Setup-Portal aktiv: mit dem WLAN '");
+            Serial.print(MIDI_DEVICE_NAME);
+            Serial.println("' verbinden und http://192.168.4.1 öffnen.");
+        }
+
+        if (portalActive)
+        {
+            wifiManager.process();
+
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                portalActive = false;
+
+                Serial.println("Setup-Portal beendet — WLAN konfiguriert.");
+            }
+        }
+
         tryStartRTP();
     }
 
@@ -150,6 +196,11 @@ bool MidiController::bleConnected()
 bool MidiController::wifiConnected()
 {
     return ENABLE_WIFI_MIDI && WiFi.status() == WL_CONNECTED;
+}
+
+bool MidiController::setupPortalActive()
+{
+    return portalActive;
 }
 
 bool MidiController::rtpReady()

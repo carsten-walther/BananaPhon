@@ -22,6 +22,9 @@ public:
 
     bool wifiConnected();
 
+    // WLAN-Setup-Portal (Captive Portal) gerade aktiv?
+    bool setupPortalActive();
+
     bool rtpReady();
 
     bool usbConnected();

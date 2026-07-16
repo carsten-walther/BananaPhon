@@ -134,7 +134,8 @@ void loop()
     {
         lastStatusUpdate = millis();
 
-        displayCtrl.showStatus(midi.bleConnected(), midi.wifiConnected(), midi.rtpReady());
+        displayCtrl.showStatus(midi.bleConnected(), midi.wifiConnected(), midi.rtpReady(),
+                               midi.setupPortalActive());
     }
 
     // Batterieanzeige in größeren Abständen aktualisieren
