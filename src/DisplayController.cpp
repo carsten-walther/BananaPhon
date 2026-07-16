@@ -91,17 +91,24 @@ static LGFX display;
 // Obere Leiste: Titel links, Status-Icons und Batterie rechts
 constexpr int32_t TITLE_Y = 10;
 
-constexpr int32_t ICON_Y    = 8;   // Oberkante der Status-Icons
-constexpr int32_t ICON_SLOT = 22;  // Breite je Icon-Platz
-constexpr int32_t ICONS_X   = 144; // linker Rand der Icon-Leiste
+constexpr int32_t ICON_Y    = 8;  // Oberkante der Status-Icons
+constexpr int32_t ICON_SLOT = 22; // Breite je Icon-Platz
+
+// Die Icon-Leiste ist horizontal zentriert — ihr linker Rand wird in
+// showStatus() aus der Displaybreite berechnet.
 
 constexpr int32_t BAT_Y = 8; // Oberkante des Batterie-Symbols
 
-// Die frühere Statuszeile ist in die obere Leiste gewandert —
-// die Pads nutzen den gewonnenen Platz.
-constexpr int32_t PAD_Y      = 34;
-constexpr int32_t PAD_HEIGHT = 122;
-constexpr int32_t PAD_GAP    = 4;
+// Pads: feste Höhe, von der Displayunterkante aus verankert.
+// PAD_Y wird in begin() aus der Displayhöhe berechnet.
+constexpr int32_t PAD_HEIGHT        = 100;
+constexpr int32_t PAD_MARGIN_BOTTOM = 4;
+constexpr int32_t PAD_GAP           = 4;
+
+// Eckenradius der Pads auf dem Display (px)
+constexpr int32_t PAD_CORNER_RADIUS = 4;
+
+static int32_t PAD_Y = 0;
 
 // Batterie-Symbol oben rechts
 constexpr int32_t BAT_WIDTH  = 26;
@@ -174,7 +181,7 @@ static void drawBleIcon(int32_t x, int32_t y, uint16_t color)
 static void drawWifiIcon(int32_t x, int32_t y, uint16_t color)
 {
     int32_t cx = x + 7;
-    int32_t cy = y + 13;
+    int32_t cy = y + 11;
 
     display.fillCircle(cx, cy, 2, color);
     display.fillArc(cx, cy, 4, 5, 225, 315, color);
@@ -185,23 +192,32 @@ static void drawWifiIcon(int32_t x, int32_t y, uint16_t color)
 // Achtelnote (Netzwerk-MIDI bereit)
 static void drawRtpIcon(int32_t x, int32_t y, uint16_t color)
 {
-    display.fillCircle(x + 5, y + 11, 3, color);
-    display.drawFastVLine(x + 8, y + 2, 10, color);
-    display.drawLine(x + 8, y + 2, x + 12, y + 6, color);
+    display.fillCircle(x + 5, y + 10, 3, color);
+    display.drawFastVLine(x + 8, y + 1, 12, color);
+    display.drawLine(x + 8, y + 2, x + 12, y + 3, color);
 }
 
-// Zahnrad (Setup-Portal aktiv)
+// Zahnrad (Setup-Portal aktiv): offener Ring mit acht Zähnen —
+// vier orthogonal, vier diagonal
 static void drawSetupIcon(int32_t x, int32_t y, uint16_t color)
 {
     int32_t cx = x + 7;
     int32_t cy = y + 7;
 
-    display.fillCircle(cx, cy, 5, color);
-    display.fillRect(cx - 1, y, 3, 3, color);
-    display.fillRect(cx - 1, y + 11, 3, 3, color);
-    display.fillRect(x, cy - 1, 3, 3, color);
-    display.fillRect(x + 11, cy - 1, 3, 3, color);
-    display.fillCircle(cx, cy, 2, TFT_BLACK);
+    // Ring (Loch in der Mitte bleibt frei)
+    display.fillArc(cx, cy, 3, 5, 0, 360, color);
+
+    // Zähne orthogonal (oben, unten, links, rechts)
+    display.fillRect(cx - 1, cy - 7, 2, 3, color);
+    display.fillRect(cx - 1, cy + 5, 2, 3, color);
+    display.fillRect(cx - 7, cy - 1, 3, 2, color);
+    display.fillRect(cx + 5, cy - 1, 3, 2, color);
+
+    // Zähne diagonal
+    display.fillRect(cx - 5, cy - 5, 2, 2, color);
+    display.fillRect(cx + 4, cy - 5, 2, 2, color);
+    display.fillRect(cx - 5, cy + 4, 2, 2, color);
+    display.fillRect(cx + 4, cy + 4, 2, 2, color);
 }
 
 // Zeichnet den Notennamen unten ins Pad. `onFill` = Text liegt auf der
@@ -252,13 +268,17 @@ void DisplayController::begin()
 
     display.fillScreen(TFT_BLACK);
 
+    // Pads an der Unterkante verankern
+    PAD_Y = display.height() - PAD_MARGIN_BOTTOM - PAD_HEIGHT;
+
     display.setTextSize(1);
 
     display.setTextDatum(textdatum_t::top_left);
 
     display.setTextColor(TFT_WHITE);
 
-    display.drawString("MIDI-Device", 10, TITLE_Y);
+    // Kurzform — der volle Name würde in die zentrierte Icon-Leiste ragen
+    display.drawString("MIDI Device", 10, TITLE_Y);
 }
 
 void DisplayController::showCalibrating()
@@ -300,7 +320,7 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
     _padPressed[index] = pressed;
 
     // Grundfläche (Ruhezustand); Füllstand/Marker werden darüber gezeichnet
-    display.fillRoundRect(x, PAD_Y, padWidth, PAD_HEIGHT, 6, TFT_DARKGREY);
+    display.fillRoundRect(x, PAD_Y, padWidth, PAD_HEIGHT, PAD_CORNER_RADIUS, TFT_DARKGREY);
 
     int32_t fill = 0;
 
@@ -469,16 +489,13 @@ void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal)
 
     _statusDrawn = true;
 
-    // Icon-Leiste in der oberen Zeile (links neben der Batterie)
-    display.fillRect(ICONS_X - 2, ICON_Y - 2, 4 * ICON_SLOT + 4, 18, TFT_BLACK);
+    // Icon-Leiste horizontal zentriert in der oberen Zeile
+    int32_t iconsX = (display.width() - 4 * ICON_SLOT) / 2;
 
-    drawBleIcon(ICONS_X + 0 * ICON_SLOT, ICON_Y, ble ? TFT_CYAN : TFT_DARKGREY);
-    drawWifiIcon(ICONS_X + 1 * ICON_SLOT, ICON_Y, wifi ? TFT_YELLOW : TFT_DARKGREY);
-    drawRtpIcon(ICONS_X + 2 * ICON_SLOT, ICON_Y, rtp ? TFT_GREEN : TFT_DARKGREY);
+    display.fillRect(iconsX - 2, ICON_Y - 2, 4 * ICON_SLOT + 4, 18, TFT_BLACK);
 
-    // Zahnrad nur, solange das WLAN-Setup-Portal offen ist
-    if (portal)
-    {
-        drawSetupIcon(ICONS_X + 3 * ICON_SLOT, ICON_Y, TFT_MAGENTA);
-    }
+    drawBleIcon(iconsX + 0 * ICON_SLOT, ICON_Y, ble ? TFT_CYAN : TFT_DARKGREY);
+    drawWifiIcon(iconsX + 1 * ICON_SLOT, ICON_Y, wifi ? TFT_YELLOW : TFT_DARKGREY);
+    drawRtpIcon(iconsX + 2 * ICON_SLOT, ICON_Y, rtp ? TFT_GREEN : TFT_DARKGREY);
+    drawSetupIcon(iconsX + 3 * ICON_SLOT, ICON_Y, portal ? TFT_MAGENTA : TFT_DARKGREY);
 }

@@ -19,7 +19,7 @@ constexpr bool ENABLE_WIFI_MIDI = true;
 constexpr bool ENABLE_USB_MIDI = false;
 
 // Gerätename (BLE-Advertising, RTP-MIDI/mDNS und Setup-Portal-AP)
-constexpr char MIDI_DEVICE_NAME[] = "MIDI-Device";
+constexpr char MIDI_DEVICE_NAME[] = "Gemuese-MIDI-Device";
 
 // WLAN-Setup-Portal: kommt WIFI_PORTAL_AFTER_MS nach dem Start keine
 // Verbindung zustande (oder ist WIFI_SSID in Credentials.h leer),
@@ -71,7 +71,7 @@ constexpr bool ENABLE_VELOCITY_PEAK_HOLD = true;
 
 constexpr uint32_t VELOCITY_PEAK_HOLD_MS          = 1000;
 constexpr uint32_t VELOCITY_PEAK_FALL_INTERVAL_MS = 30;
-constexpr int32_t VELOCITY_PEAK_FALL_PX           = 4;
+constexpr int32_t VELOCITY_PEAK_FALL_PX           = 2;
 
 // Peak-Fenster in ms: nach dem Überschreiten der ON-Schwelle wird so
 // lange der Spitzenwert gesammelt, erst dann geht das NoteOn raus —
