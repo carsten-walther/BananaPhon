@@ -220,6 +220,15 @@ static void drawSetupIcon(int32_t x, int32_t y, uint16_t color)
     display.fillRect(cx + 4, cy + 4, 2, 2, color);
 }
 
+// Lautsprecher (Standalone-Betrieb): Korpus, Membran, Schallbögen
+static void drawSpeakerIcon(int32_t x, int32_t y, uint16_t color)
+{
+    display.fillRect(x + 1, y + 5, 3, 5, color);
+    display.fillTriangle(x + 3, y + 7, x + 8, y + 2, x + 8, y + 12, color);
+    display.fillArc(x + 8, y + 7, 2, 3, 300, 60, color);
+    display.fillArc(x + 8, y + 7, 5, 6, 300, 60, color);
+}
+
 // Zeichnet den Notennamen unten ins Pad. `onFill` = Text liegt auf der
 // hellen Velocity-Füllung (dann schwarz für den Kontrast).
 static void drawPadLabel(uint8_t index, int32_t x, int32_t padWidth, bool onFill)
@@ -474,28 +483,30 @@ void DisplayController::showBattery(uint32_t milliVolts)
     }
 }
 
-void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal)
+void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, bool speaker)
 {
     if (_statusDrawn && ble == _lastBle && wifi == _lastWifi && rtp == _lastRtp &&
-        portal == _lastPortal)
+        portal == _lastPortal && speaker == _lastSpeaker)
     {
         return;
     }
 
-    _lastBle    = ble;
-    _lastWifi   = wifi;
-    _lastRtp    = rtp;
-    _lastPortal = portal;
+    _lastBle     = ble;
+    _lastWifi    = wifi;
+    _lastRtp     = rtp;
+    _lastPortal  = portal;
+    _lastSpeaker = speaker;
 
     _statusDrawn = true;
 
     // Icon-Leiste horizontal zentriert in der oberen Zeile
-    int32_t iconsX = (display.width() - 4 * ICON_SLOT) / 2;
+    int32_t iconsX = (display.width() - 5 * ICON_SLOT) / 2;
 
-    display.fillRect(iconsX - 2, ICON_Y - 2, 4 * ICON_SLOT + 4, 18, TFT_BLACK);
+    display.fillRect(iconsX - 2, ICON_Y - 2, 5 * ICON_SLOT + 4, 18, TFT_BLACK);
 
     drawBleIcon(iconsX + 0 * ICON_SLOT, ICON_Y, ble ? TFT_CYAN : TFT_DARKGREY);
     drawWifiIcon(iconsX + 1 * ICON_SLOT, ICON_Y, wifi ? TFT_YELLOW : TFT_DARKGREY);
     drawRtpIcon(iconsX + 2 * ICON_SLOT, ICON_Y, rtp ? TFT_GREEN : TFT_DARKGREY);
     drawSetupIcon(iconsX + 3 * ICON_SLOT, ICON_Y, portal ? TFT_MAGENTA : TFT_DARKGREY);
+    drawSpeakerIcon(iconsX + 4 * ICON_SLOT, ICON_Y, speaker ? TFT_ORANGE : TFT_DARKGREY);
 }

@@ -150,6 +150,31 @@ constexpr uint32_t TOUCH_BASELINE_INTERVAL_MS = 250; // 0 = Nachführung aus
 constexpr uint16_t TOUCH_BASELINE_FILTER      = 16;
 
 // ------------------------------------------------
+// Lautsprecher (Standalone-Synth)
+// ------------------------------------------------
+
+// Ist kein MIDI-Ziel verbunden (weder BLE noch RTP), spielt ein
+// I2S-Verstärker (MAX98357A) die Noten direkt: polyphon, eine
+// Dreieck-Stimme pro Pad, Velocity = Lautstärke der Stimme.
+constexpr bool ENABLE_SPEAKER = true;
+
+// I2S-Pins zum MAX98357A (BCLK/LRC/DIN); 5V und GND nicht vergessen
+constexpr uint8_t PIN_I2S_BCLK  = 16;
+constexpr uint8_t PIN_I2S_LRCLK = 17;
+constexpr uint8_t PIN_I2S_DOUT  = 18;
+
+constexpr uint32_t SPEAKER_SAMPLE_RATE = 22050;
+
+// Gesamtlautstärke 0.0–1.0 (Hardware-Feintrim über den Gain-Pin
+// des MAX98357A)
+constexpr float SPEAKER_MASTER_VOLUME = 0.6f;
+
+// Hüllkurve pro Stimme: kurze Rampen verhindern Knackser bei
+// NoteOn/NoteOff
+constexpr uint32_t SPEAKER_ATTACK_MS  = 5;
+constexpr uint32_t SPEAKER_RELEASE_MS = 40;
+
+// ------------------------------------------------
 // Buttons
 // ------------------------------------------------
 

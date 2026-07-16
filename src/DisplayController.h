@@ -28,8 +28,9 @@ public:
     void updatePeaks();
 
     // Aktualisiert die Statuszeile; zeichnet nur bei Änderung neu.
-    // `portal` = WLAN-Setup-Portal aktiv (zeigt "SETUP" an).
-    void showStatus(bool ble, bool wifi, bool rtp, bool portal = false);
+    // `portal` = WLAN-Setup-Portal aktiv, `speaker` = Standalone-
+    // Betrieb über den Lautsprecher (kein MIDI-Ziel verbunden).
+    void showStatus(bool ble, bool wifi, bool rtp, bool portal = false, bool speaker = false);
 
     // Batterieanzeige oben rechts; zeichnet nur bei Änderung neu.
     // milliVolts: Batteriespannung (bereits mit Spannungsteiler
@@ -37,10 +38,11 @@ public:
     void showBattery(uint32_t milliVolts);
 
 private:
-    bool _lastBle    = false;
-    bool _lastWifi   = false;
-    bool _lastRtp    = false;
-    bool _lastPortal = false;
+    bool _lastBle     = false;
+    bool _lastWifi    = false;
+    bool _lastRtp     = false;
+    bool _lastPortal  = false;
+    bool _lastSpeaker = false;
 
     bool _statusDrawn = false;
 

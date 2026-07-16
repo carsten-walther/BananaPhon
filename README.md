@@ -22,6 +22,11 @@ Pads, den Verbindungsstatus und den Batteriestand.
   Fingerspitze; per Peak-Fenster (~10 ms) wird der Spitzenwert des
   Anschlags erfasst
 - **BLE-MIDI**: erscheint als Bluetooth-MIDI-Gerät (macOS, iOS, Windows 10+)
+- **Standalone-Betrieb mit Lautsprecher**: ohne verbundenes
+  MIDI-Ziel spielt ein I2S-Verstärker (MAX98357A an GPIO 16/17/18)
+  die Noten direkt — polyphon mit einer Dreieck-Stimme pro Pad,
+  Velocity steuert die Lautstärke; Lautsprecher-Icon in der
+  Statusleiste zeigt den Modus
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
   öffnet das Gerät ein Captive Portal (AP „Gemuese-MIDI-Device",
   http://192.168.4.1, Zahnrad-Icon in der Statusleiste) — dort eingetragene Zugangsdaten überleben
