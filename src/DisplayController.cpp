@@ -275,7 +275,9 @@ static void drawPadLabel(uint8_t index, int32_t x, int32_t padWidth)
 
     noteName(midiNotes[index], label, sizeof(label));
 
-    display.setTextSize(2);
+    display.setFont(&fonts::DejaVu18);
+
+    display.setTextSize(1);
 
     display.setTextDatum(textdatum_t::middle_center);
 
@@ -284,6 +286,8 @@ static void drawPadLabel(uint8_t index, int32_t x, int32_t padWidth)
     display.setTextColor(TFT_BLACK);
 
     display.drawString(label, x + padWidth / 2, PAD_Y + PAD_HEIGHT - PAD_LABEL_CENTER);
+
+    display.unloadFont();
 }
 
 // Zeichnet die Peak-Markerlinie auf Höhe `pos` (px ab Pad-Unterkante)
@@ -311,16 +315,18 @@ void DisplayController::begin()
 
     display.init();
 
-    display.setRotation(1);
+    display.setRotation(DISPLAY_ROTATION);
 
-    display.setBrightness(255);
+    display.setBrightness(DISPLAY_BRIGHNESS);
 
     display.fillScreen(TFT_BLACK);
 
     // Pads an der Unterkante verankern
     PAD_Y = display.height() - PAD_MARGIN_BOTTOM - PAD_HEIGHT;
 
-    display.setTextSize(1.25);
+    display.setFont(&fonts::DejaVu12);
+
+    display.setTextSize(1);
 
     display.setTextDatum(textdatum_t::top_left);
 
@@ -328,13 +334,17 @@ void DisplayController::begin()
 
     // Kurzform — der volle Name würde in die zentrierte Icon-Leiste ragen
     display.drawString(MIDI_DEVICE_NAME, 10, TITLE_Y);
+
+    display.unloadFont();
 }
 
 void DisplayController::showCalibrating()
 {
     clearPadArea();
 
-    display.setTextSize(2);
+    display.setTextSize(1);
+
+    display.setFont(&fonts::DejaVu18);
 
     display.setTextDatum(textdatum_t::middle_center);
 
@@ -343,6 +353,8 @@ void DisplayController::showCalibrating()
     display.setTextDatum(textdatum_t::middle_center);
 
     display.drawString("Calibrating", display.width() / 2, display.height() / 2);
+
+    display.unloadFont();
 }
 
 void DisplayController::showPads()
@@ -521,6 +533,8 @@ void DisplayController::showBattery(uint32_t milliVolts)
 
     display.fillRect(x + BAT_WIDTH, y + (BAT_HEIGHT - 6) / 2, BAT_NUB, 6, TFT_WHITE);
 
+    display.setFont(&fonts::DejaVu12);
+
     display.setTextSize(1);
 
     display.setTextDatum(textdatum_t::middle_right);
@@ -528,9 +542,9 @@ void DisplayController::showBattery(uint32_t milliVolts)
     if (usbPower)
     {
         // USB-Versorgung: Symbol gefüllt, Beschriftung "USB"
-        display.fillRect(x + 2, y + 2, BAT_WIDTH - 4, BAT_HEIGHT - 4, TFT_CYAN);
+        display.fillRect(x + 2, y + 2, BAT_WIDTH - 4, BAT_HEIGHT - 4, TFT_GREEN);
 
-        display.setTextColor(TFT_CYAN);
+        display.setTextColor(TFT_WHITE);
 
         display.drawString("USB", x - 4, y + BAT_HEIGHT / 2);
     }
@@ -554,6 +568,8 @@ void DisplayController::showBattery(uint32_t milliVolts)
 
         display.drawString(label, x - 4, y + BAT_HEIGHT / 2);
     }
+
+    display.unloadFont();
 }
 
 void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, bool speaker)

@@ -182,3 +182,13 @@ constexpr uint32_t SPEAKER_RELEASE_MS = 40;
 // Sensoren im Betrieb — z. B. nach dem Umstecken auf neues Gemüse.
 // Während der Kalibrierung die Elektroden nicht berühren!
 constexpr uint8_t PIN_BUTTON_RECALIBRATE = 14;
+
+// ------------------------------------------------
+// Display
+// ------------------------------------------------
+
+// Display Rotation 0 ... 3 (sinnvoll sind 1 und 3)
+constexpr uint8_t DISPLAY_ROTATION = 3;
+
+// Display Helligkeit 0 ... 255
+constexpr uint8_t DISPLAY_BRIGHNESS = 204;
