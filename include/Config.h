@@ -61,7 +61,7 @@ constexpr bool ENABLE_VELOCITY_PEAK_HOLD = true;
 
 constexpr uint32_t VELOCITY_PEAK_HOLD_MS          = 1000;
 constexpr uint32_t VELOCITY_PEAK_FALL_INTERVAL_MS = 30;
-constexpr int32_t VELOCITY_PEAK_FALL_PX           = 2;
+constexpr int32_t VELOCITY_PEAK_FALL_PX           = 4;
 
 // Peak-Fenster in ms: nach dem Überschreiten der ON-Schwelle wird so
 // lange der Spitzenwert gesammelt, erst dann geht das NoteOn raus —
