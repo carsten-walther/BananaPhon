@@ -1,6 +1,6 @@
-# Gemüse-MIDI-Device
+# BananaPhon / MIDI-Device
 
-![Build und Check](https://github.com/carsten-walther/Gemuese-MIDI-Device/actions/workflows/ci.yml/badge.svg)
+![Build und Check](https://github.com/carsten-walther/BananaPhon/actions/workflows/ci.yml/badge.svg)
 
 Ein Touch-MIDI-Interface auf Basis des **LilyGo T-Display S3** (ESP32-S3):
 Bis zu sieben kapazitive Touch-Sensoren — zum Beispiel Gemüse — lösen
@@ -28,7 +28,7 @@ Pads, den Verbindungsstatus und den Batteriestand.
   Velocity steuert die Lautstärke; Lautsprecher-Icon in der
   Statusleiste zeigt den Modus
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
-  öffnet das Gerät ein Captive Portal (AP „Gemuese-MIDI-Device",
+  öffnet das Gerät ein Captive Portal (AP "BananaPhon",
   http://192.168.4.1, Zahnrad-Icon in der Statusleiste) — dort eingetragene Zugangsdaten überleben
   Neustarts; BLE-MIDI läuft währenddessen weiter
 - **RTP-MIDI / AppleMIDI** über WLAN inkl. Bonjour/mDNS-Discovery:
@@ -72,8 +72,8 @@ Für mehr Eingänge bietet sich ein externer Touch-Controller
 Voraussetzung: [PlatformIO](https://platformio.org/) (CLI oder VS-Code-Extension).
 
 ```sh
-git clone https://github.com/carsten-walther/Gemuese-MIDI-Device.git
-cd Gemuese-MIDI-Device
+git clone https://github.com/carsten-walther/BananaPhon.git
+cd BananaPhon
 
 # WLAN-Zugangsdaten anlegen (bleiben lokal, sind gitignoriert)
 cp include/Credentials.example.h include/Credentials.h
@@ -101,7 +101,7 @@ Sensoren werden neu kalibriert, dabei ebenfalls nicht berühren.
 ## MIDI verbinden
 
 **BLE (macOS):** Audio-MIDI-Setup → Fenster → MIDI-Studio →
-Bluetooth-Symbol → „Gemuese-MIDI-Device" verbinden.
+Bluetooth-Symbol → „BananaPhon" verbinden.
 
 **RTP-MIDI (macOS):** Audio-MIDI-Setup → MIDI-Studio → Netzwerk-Symbol →
 das Gerät erscheint per Bonjour im Verzeichnis → verbinden.
@@ -157,7 +157,7 @@ pio run -t compiledb # compile_commands.json für clangd erzeugen
 
 Ist keine SSID einkompiliert oder schlägt die Verbindung 30 Sekunden
 lang fehl, spannt das Gerät einen Access Point auf und zeigt ein magentafarbenes
-**Zahnrad** in der Statusleiste. Dann: mit dem WLAN „Gemuese-MIDI-Device" verbinden,
+**Zahnrad** in der Statusleiste. Dann: mit dem WLAN „BananaPhon" verbinden,
 http://192.168.4.1 öffnen, eigenes WLAN auswählen und Passwort
 eintragen. Die Daten landen im Flash des ESP32 — beim nächsten Start
 verbindet sich das Gerät direkt. Eine in `Credentials.h` eingetragene
