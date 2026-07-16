@@ -27,6 +27,9 @@ private:
     uint32_t _onThreshold;
     uint32_t _offThreshold;
     uint32_t _lastBaselineUpdate;
+
+    // Glitch-Filter: Zähler aufeinanderfolgender Messungen über der
+    // ON-Schwelle (siehe Config.h)
     uint8_t _aboveCount;
 
     // Peak-Fenster für die Anschlagsdynamik (siehe Config.h)
