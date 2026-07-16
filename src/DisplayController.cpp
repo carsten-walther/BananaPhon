@@ -114,16 +114,20 @@ constexpr uint32_t USB_POWER_MV = 4400;
 // Helfer
 // ------------------------------------------------
 
-static const char* noteName(uint8_t note)
+// Schreibt den Notennamen (z. B. "C4") nach `buf`. Der Puffer kommt vom
+// Aufrufer — kein statischer Zustand, die Funktion ist reentrant.
+static void noteName(uint8_t note, char* buf, size_t len)
 {
-    static const char* names[12] = {"C",  "C#", "D",  "D#", "E",  "F",
-                                    "F#", "G",  "G#", "A",  "A#", "B"};
+    static const char* namesEn[12] = {"C",  "C#", "D",  "D#", "E",  "F",
+                                      "F#", "G",  "G#", "A",  "A#", "B"};
 
-    static char buf[8];
+    // Deutsche Konvention: H statt B (das deutsche B wäre engl. A#/Bb)
+    static const char* namesDe[12] = {"C",  "C#", "D",  "D#", "E",  "F",
+                                      "F#", "G",  "G#", "A",  "A#", "H"};
 
-    snprintf(buf, sizeof(buf), "%s%d", names[note % 12], note / 12 - 1);
+    const char** names = USE_GERMAN_NOTE_NAMES ? namesDe : namesEn;
 
-    return buf;
+    snprintf(buf, len, "%s%d", names[note % 12], note / 12 - 1);
 }
 
 static void clearStatusLine()
@@ -218,7 +222,11 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
 
     display.setTextColor(labelOnFill ? TFT_BLACK : TFT_WHITE);
 
-    display.drawString(noteName(midiNotes[index]), x + padWidth / 2, PAD_Y + PAD_HEIGHT / 2);
+    char label[8];
+
+    noteName(midiNotes[index], label, sizeof(label));
+
+    display.drawString(label, x + padWidth / 2, PAD_Y + PAD_HEIGHT / 2);
 }
 
 void DisplayController::showBattery(uint32_t milliVolts)
@@ -283,7 +291,11 @@ void DisplayController::showBattery(uint32_t milliVolts)
 
         display.setTextColor(TFT_WHITE);
 
-        display.drawString(String(percent) + "%", x - 4, y + BAT_HEIGHT / 2);
+        char label[8];
+
+        snprintf(label, sizeof(label), "%d%%", percent);
+
+        display.drawString(label, x - 4, y + BAT_HEIGHT / 2);
     }
 }
 

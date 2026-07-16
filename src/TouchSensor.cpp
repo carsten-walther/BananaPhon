@@ -2,28 +2,10 @@
 
 #include "Config.h"
 
-TouchSensor::TouchSensor(uint8_t pin, uint8_t note)
-    : _pin(pin)
-    , _note(note)
-    , _value(0)
-    , _baseline(0)
-    , _onThreshold(0)
-    , _offThreshold(0)
-    , _lastBaselineUpdate(0)
-    , _aboveCount(0)
-    , _measuring(false)
-    , _measureStart(0)
-    , _peak(0)
-    , _velocity(DEFAULT_VELOCITY)
-    , _pressed(false)
-    , _pressedEvent(false)
-    , _releasedEvent(false)
+void TouchSensor::configure(uint8_t pin, uint8_t note)
 {
-}
-
-void TouchSensor::begin()
-{
-    recalibrate();
+    _pin  = pin;
+    _note = note;
 }
 
 // Misst die Baseline neu und setzt die Schwellwerte. Blockiert für

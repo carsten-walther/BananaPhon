@@ -62,6 +62,10 @@ constexpr uint32_t TOUCH_VELOCITY_WINDOW_MS = 10;
 // Anzahl der Sensoren
 constexpr uint8_t NUM_SENSORS = 7;
 
+// Notennamen auf dem Display: deutsch (H statt B, wie in der README)
+// oder englisch (B). Betrifft nur die Anzeige, nie die MIDI-Noten.
+constexpr bool USE_GERMAN_NOTE_NAMES = true;
+
 // MIDI-Noten
 constexpr uint8_t midiNotes[NUM_SENSORS] = {
     60, // C4

@@ -6,7 +6,8 @@
 #include "MidiController.h"
 #include "TouchSensor.h"
 
-TouchSensor* sensors[NUM_SENSORS];
+// Statisch statt per new: kein Heap, feste Adressen, cppcheck-freundlich
+TouchSensor sensors[NUM_SENSORS];
 
 MidiController midi;
 
@@ -28,9 +29,9 @@ static void recalibrateSensors()
 {
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
-        if (sensors[i]->isPressed())
+        if (sensors[i].isPressed())
         {
-            midi.noteOff(sensors[i]->note());
+            midi.noteOff(sensors[i].note());
 
             displayCtrl.drawPad(i, false);
         }
@@ -40,12 +41,12 @@ static void recalibrateSensors()
 
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
-        sensors[i]->recalibrate();
+        sensors[i].recalibrate();
 
         Serial.print("Sensor ");
         Serial.print(i);
         Serial.print(" Baseline: ");
-        Serial.println(sensors[i]->baseline());
+        Serial.println(sensors[i].baseline());
     }
 
     displayCtrl.showPads();
@@ -65,10 +66,10 @@ void setup()
 
     displayCtrl.showCalibrating();
 
-    // Sensoren anlegen und kalibrieren (dabei nicht berühren!)
+    // Sensoren konfigurieren und kalibrieren (dabei nicht berühren!)
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
-        sensors[i] = new TouchSensor(touchPins[i], midiNotes[i]);
+        sensors[i].configure(touchPins[i], midiNotes[i]);
     }
 
     recalibrateSensors();
@@ -100,24 +101,24 @@ void loop()
 
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
-        sensors[i]->update();
+        sensors[i].update();
 
-        if (sensors[i]->pressedEvent())
+        if (sensors[i].pressedEvent())
         {
-            midi.noteOn(sensors[i]->note(), sensors[i]->velocity());
+            midi.noteOn(sensors[i].note(), sensors[i].velocity());
 
-            displayCtrl.drawPad(i, true, sensors[i]->velocity());
+            displayCtrl.drawPad(i, true, sensors[i].velocity());
 
             // Tuning-Hilfe für TOUCH_VELOCITY_RATIO_MAX (siehe Config.h)
             Serial.print("NoteOn ");
-            Serial.print(sensors[i]->note());
+            Serial.print(sensors[i].note());
             Serial.print(" vel ");
-            Serial.println(sensors[i]->velocity());
+            Serial.println(sensors[i].velocity());
         }
 
-        if (sensors[i]->releasedEvent())
+        if (sensors[i].releasedEvent())
         {
-            midi.noteOff(sensors[i]->note());
+            midi.noteOff(sensors[i].note());
 
             displayCtrl.drawPad(i, false);
         }

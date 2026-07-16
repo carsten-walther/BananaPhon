@@ -2,12 +2,18 @@
 
 #include <Arduino.h>
 
+#include "Config.h"
+
 class TouchSensor
 {
 public:
-    TouchSensor(uint8_t pin, uint8_t note);
+    TouchSensor() = default;
 
-    void begin();
+    // Pin und Note zuweisen — vor recalibrate() aufrufen. Getrennt vom
+    // Konstruktor, damit die Sensoren als statisches Array (ohne Heap)
+    // angelegt und in setup() aus Config-Tabellen bestückt werden können.
+    void configure(uint8_t pin, uint8_t note);
+
     void recalibrate();
     void update();
     bool pressedEvent();
@@ -20,27 +26,28 @@ public:
     uint8_t note();
 
 private:
-    uint8_t _pin;
-    uint8_t _note;
-    uint32_t _value;
-    uint32_t _baseline;
-    uint32_t _onThreshold;
-    uint32_t _offThreshold;
-    uint32_t _lastBaselineUpdate;
+    uint8_t _pin  = 0;
+    uint8_t _note = 0;
+
+    uint32_t _value              = 0;
+    uint32_t _baseline           = 0;
+    uint32_t _onThreshold        = 0;
+    uint32_t _offThreshold       = 0;
+    uint32_t _lastBaselineUpdate = 0;
 
     // Glitch-Filter: Zähler aufeinanderfolgender Messungen über der
     // ON-Schwelle (siehe Config.h)
-    uint8_t _aboveCount;
+    uint8_t _aboveCount = 0;
 
     // Peak-Fenster für die Anschlagsdynamik (siehe Config.h)
-    bool _measuring;
-    uint32_t _measureStart;
-    uint32_t _peak;
-    uint8_t _velocity;
+    bool _measuring        = false;
+    uint32_t _measureStart = 0;
+    uint32_t _peak         = 0;
+    uint8_t _velocity      = DEFAULT_VELOCITY;
 
     void finishMeasurement();
 
-    bool _pressed;
-    bool _pressedEvent;
-    bool _releasedEvent;
+    bool _pressed       = false;
+    bool _pressedEvent  = false;
+    bool _releasedEvent = false;
 };

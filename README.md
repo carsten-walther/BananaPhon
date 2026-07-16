@@ -107,7 +107,8 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
   `VELOCITY_MAX`, Kennlinie `TOUCH_VELOCITY_RATIO_MAX`, Peak-Fenster
   `TOUCH_VELOCITY_WINDOW_MS`) — der serielle Monitor zeigt die
   gesendete Velocity pro NoteOn zum Einstellen der Kennlinie
-- Noten- und Pin-Zuordnung der Sensoren
+- Noten- und Pin-Zuordnung der Sensoren; Notennamen auf dem Display
+  wahlweise deutsch (H4) oder englisch (B4) via `USE_GERMAN_NOTE_NAMES`
 - Touch-Empfindlichkeit (`TOUCH_ON_RATIO` / `TOUCH_OFF_RATIO`)
 - Baseline-Nachführung (`TOUCH_BASELINE_INTERVAL_MS` = 0 schaltet sie ab,
   `TOUCH_BASELINE_FILTER` bestimmt die Trägheit)
