@@ -1,5 +1,7 @@
 # Gemüse-MIDI-Device
 
+![Build und Check](https://github.com/carsten-walther/Gemuese-MIDI-Device/actions/workflows/ci.yml/badge.svg)
+
 Ein Touch-MIDI-Interface auf Basis des **LilyGo T-Display S3** (ESP32-S3):
 Bis zu sieben kapazitive Touch-Sensoren — zum Beispiel Gemüse — lösen
 MIDI-Noten aus, die drahtlos per **BLE-MIDI** und **RTP-MIDI (AppleMIDI)**
@@ -15,12 +17,17 @@ Pads, den Verbindungsstatus und den Batteriestand.
   (austrocknendes Gemüse, Temperatur) automatisch; der untere
   Board-Button (GPIO 14) kalibriert jederzeit manuell neu — z. B.
   nach dem Umstecken auf neues Gemüse
+- **Anschlagsdynamik**: die Velocity wird aus der Touch-Intensität
+  abgeleitet (Kontaktfläche) — ein satter Griff klingt lauter als eine
+  Fingerspitze; per Peak-Fenster (~10 ms) wird der Spitzenwert des
+  Anschlags erfasst
 - **BLE-MIDI**: erscheint als Bluetooth-MIDI-Gerät (macOS, iOS, Windows 10+)
 - **RTP-MIDI / AppleMIDI** über WLAN inkl. Bonjour/mDNS-Discovery:
   erscheint im Audio-MIDI-Setup (macOS) bzw. in [rtpMIDI](https://www.tobias-erichsen.de/software/rtpmidi.html) (Windows)
 - **USB-Host-MIDI** (optional): ein externes MIDI-Gerät kann an den
   ESP32 angeschlossen werden
-- **Display-UI**: Pads mit Notennamen (leuchten bei Berührung),
+- **Display-UI**: Pads mit Notennamen — beim Anschlag füllen sie sich
+  von unten proportional zur Velocity (grün/gelb/rot, VU-Stil) —,
   Statuszeile (BLE / WLAN / RTP), Batterieanzeige mit Ladestand
   bzw. USB-Erkennung
 
@@ -96,6 +103,10 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
 - Transports einzeln schaltbar (`ENABLE_BLE_MIDI`, `ENABLE_WIFI_MIDI`,
   `ENABLE_USB_MIDI`)
 - Gerätename, MIDI-Kanal, Velocity
+- Anschlagsdynamik (`ENABLE_TOUCH_VELOCITY`, Spanne `VELOCITY_MIN` /
+  `VELOCITY_MAX`, Kennlinie `TOUCH_VELOCITY_RATIO_MAX`, Peak-Fenster
+  `TOUCH_VELOCITY_WINDOW_MS`) — der serielle Monitor zeigt die
+  gesendete Velocity pro NoteOn zum Einstellen der Kennlinie
 - Noten- und Pin-Zuordnung der Sensoren
 - Touch-Empfindlichkeit (`TOUCH_ON_RATIO` / `TOUCH_OFF_RATIO`)
 - Baseline-Nachführung (`TOUCH_BASELINE_INTERVAL_MS` = 0 schaltet sie ab,
@@ -130,3 +141,7 @@ Verwendete Bibliotheken:
 [ESP32_Host_MIDI](https://github.com/sauloverissimo/ESP32_Host_MIDI),
 [LovyanGFX](https://github.com/lovyan03/LovyanGFX),
 [AppleMIDI](https://github.com/lathoub/Arduino-AppleMIDI-Library)
+
+## Lizenz
+
+MIT — siehe [LICENSE](LICENSE).

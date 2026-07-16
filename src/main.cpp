@@ -106,7 +106,13 @@ void loop()
         {
             midi.noteOn(sensors[i]->note(), sensors[i]->velocity());
 
-            displayCtrl.drawPad(i, true);
+            displayCtrl.drawPad(i, true, sensors[i]->velocity());
+
+            // Tuning-Hilfe für TOUCH_VELOCITY_RATIO_MAX (siehe Config.h)
+            Serial.print("NoteOn ");
+            Serial.print(sensors[i]->note());
+            Serial.print(" vel ");
+            Serial.println(sensors[i]->velocity());
         }
 
         if (sensors[i]->releasedEvent())

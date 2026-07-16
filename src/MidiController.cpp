@@ -72,6 +72,14 @@ void MidiController::begin()
     {
         WiFi.mode(WIFI_STA);
 
+        // Bei WLAN-Abbruch (Router-Neustart, Reichweite) automatisch
+        // neu verbinden; persistent(false) verhindert, dass die
+        // Zugangsdaten bei jedem Boot erneut in den NVS-Flash
+        // geschrieben werden.
+        WiFi.persistent(false);
+
+        WiFi.setAutoReconnect(true);
+
         WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
 
@@ -94,6 +102,29 @@ void MidiController::update()
 {
     if (ENABLE_WIFI_MIDI)
     {
+        // Statusübergänge loggen — Auto-Reconnect übernimmt das
+        // Neuverbinden, hier wird es nur sichtbar gemacht. Die
+        // RTP-Sockets überleben den Reconnect (gleiche IP per DHCP-
+        // Lease); die Gegenstelle nimmt die Session danach wieder auf.
+        static bool wasConnected = false;
+
+        bool connected = WiFi.status() == WL_CONNECTED;
+
+        if (connected != wasConnected)
+        {
+            wasConnected = connected;
+
+            if (connected)
+            {
+                Serial.print("WLAN verbunden: ");
+                Serial.println(WiFi.localIP());
+            }
+            else
+            {
+                Serial.println("WLAN getrennt — Auto-Reconnect aktiv");
+            }
+        }
+
         tryStartRTP();
     }
 

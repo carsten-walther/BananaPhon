@@ -37,6 +37,28 @@ constexpr char MIDI_DEVICE_NAME[] = "Gemuese-MIDI-Device";
 constexpr uint8_t MIDI_CHANNEL     = 1;
 constexpr uint8_t DEFAULT_VELOCITY = 100;
 
+// Anschlagsdynamik: Velocity aus der Touch-Intensität ableiten.
+// Der kapazitive Messwert steigt mit der Kontaktfläche — ein satter
+// Griff ergibt höhere Werte als eine Fingerspitze. Bei false wird
+// immer DEFAULT_VELOCITY gesendet.
+constexpr bool ENABLE_TOUCH_VELOCITY = true;
+
+// Velocity-Spanne und Kennlinie: VELOCITY_MIN wird bei einem Messwert
+// knapp über der ON-Schwelle gesendet, VELOCITY_MAX ab
+// baseline * TOUCH_VELOCITY_RATIO_MAX (dazwischen linear).
+// Liegt VELOCITY_RATIO_MAX zu hoch, erreicht man das Maximum nie —
+// die eigenen Peak-Werte zeigt der serielle Monitor.
+constexpr uint8_t VELOCITY_MIN = 32;
+constexpr uint8_t VELOCITY_MAX = 127;
+
+constexpr float TOUCH_VELOCITY_RATIO_MAX = 1.60f;
+
+// Peak-Fenster in ms: nach dem Überschreiten der ON-Schwelle wird so
+// lange der Spitzenwert gesammelt, erst dann geht das NoteOn raus —
+// der Messwert steigt beim Auftreffen des Fingers noch einige ms an.
+// 0 = kein Fenster (NoteOn sofort, Velocity aus der ersten Messung).
+constexpr uint32_t TOUCH_VELOCITY_WINDOW_MS = 10;
+
 // Anzahl der Sensoren
 constexpr uint8_t NUM_SENSORS = 7;
 
@@ -84,6 +106,13 @@ constexpr float TOUCH_ON_RATIO  = 1.15f;
 constexpr float TOUCH_OFF_RATIO = 1.08f;
 
 constexpr uint8_t TOUCH_CALIBRATION_SAMPLES = 16;
+
+// Glitch-Filter: so viele aufeinanderfolgende Messungen müssen über der
+// ON-Schwelle liegen, bevor ein Anschlag beginnt. Ein einzelner
+// Messwert-Ausreißer (ADC-Glitch, WLAN-Burst) löst so keine Geisternote
+// mehr aus; bei 2 Messungen kostet das nur einen Loop-Durchlauf (~5 ms).
+// 1 = Filter aus (jede Messung zählt sofort).
+constexpr uint8_t TOUCH_CONFIRM_SAMPLES = 2;
 
 // Baseline-Nachführung: solange ein Sensor NICHT gedrückt ist, folgt
 // seine Baseline dem Messwert langsam (IIR-Tiefpass). Das kompensiert

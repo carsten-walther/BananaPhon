@@ -27,6 +27,15 @@ private:
     uint32_t _onThreshold;
     uint32_t _offThreshold;
     uint32_t _lastBaselineUpdate;
+    uint8_t _aboveCount;
+
+    // Peak-Fenster für die Anschlagsdynamik (siehe Config.h)
+    bool _measuring;
+    uint32_t _measureStart;
+    uint32_t _peak;
+    uint8_t _velocity;
+
+    void finishMeasurement();
 
     bool _pressed;
     bool _pressedEvent;

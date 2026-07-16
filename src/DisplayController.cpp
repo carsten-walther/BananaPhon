@@ -182,19 +182,41 @@ void DisplayController::showPads()
     }
 }
 
-void DisplayController::drawPad(uint8_t index, bool pressed)
+void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
 {
     int32_t padWidth = (display.width() - (NUM_SENSORS + 1) * PAD_GAP) / NUM_SENSORS;
 
     int32_t x = PAD_GAP + index * (padWidth + PAD_GAP);
 
-    display.fillRoundRect(x, PAD_Y, padWidth, PAD_HEIGHT, 6, pressed ? TFT_WHITE : TFT_DARKGREY);
+    // Grundfläche (Ruhezustand); der Füllstand wird darüber gezeichnet
+    display.fillRoundRect(x, PAD_Y, padWidth, PAD_HEIGHT, 6, TFT_DARKGREY);
+
+    int32_t fill = 0;
+
+    if (pressed)
+    {
+        // Füllstand von unten, Höhe und Farbe nach Velocity (VU-Stil).
+        // Als Rechteck 2 px innerhalb der abgerundeten Grundfläche,
+        // damit die Ecken sauber bleiben.
+        fill = (PAD_HEIGHT - 4) * velocity / 127;
+
+        if (fill > 0)
+        {
+            uint16_t color = velocity < 60 ? TFT_GREEN : (velocity < 100 ? TFT_YELLOW : TFT_RED);
+
+            display.fillRect(x + 2, PAD_Y + 2 + (PAD_HEIGHT - 4 - fill), padWidth - 4, fill, color);
+        }
+    }
 
     display.setTextSize(2);
 
     display.setTextDatum(textdatum_t::middle_center);
 
-    display.setTextColor(pressed ? TFT_BLACK : TFT_WHITE);
+    // Reicht der Füllstand bis über die Pad-Mitte, liegt der Notenname
+    // auf der hellen Füllung — dann schwarz für den Kontrast.
+    bool labelOnFill = pressed && fill >= (PAD_HEIGHT - 4) / 2;
+
+    display.setTextColor(labelOnFill ? TFT_BLACK : TFT_WHITE);
 
     display.drawString(noteName(midiNotes[index]), x + padWidth / 2, PAD_Y + PAD_HEIGHT / 2);
 }

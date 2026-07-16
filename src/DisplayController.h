@@ -15,8 +15,10 @@ public:
     // Zeichnet alle Pads im Ruhezustand (nach der Kalibrierung)
     void showPads();
 
-    // Zeichnet ein einzelnes Pad (gedrückt/losgelassen)
-    void drawPad(uint8_t index, bool pressed);
+    // Zeichnet ein einzelnes Pad. Gedrückt: Füllstand von unten
+    // proportional zur Velocity (VU-Stil, grün/gelb/rot);
+    // losgelassen: Ruhezustand.
+    void drawPad(uint8_t index, bool pressed, uint8_t velocity = 0);
 
     // Aktualisiert die Statuszeile; zeichnet nur bei Änderung neu
     void showStatus(bool ble, bool wifi, bool rtp);

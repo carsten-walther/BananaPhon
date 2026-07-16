@@ -1,0 +1,48 @@
+name: Build und Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Plattform-Toolchain und Bibliotheken cachen — spart pro Lauf
+      # mehrere Minuten Download (ESP32-Toolchain ist groß).
+      - name: PlatformIO-Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            .pio
+          key: platformio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+
+      - name: PlatformIO installieren
+        run: pip install platformio
+
+      # Der Build braucht Credentials.h — im CI genügt die Vorlage
+      # mit Platzhaltern (es wird nur kompiliert, nicht verbunden).
+      - name: Credentials-Platzhalter anlegen
+        run: cp include/Credentials.example.h include/Credentials.h
+
+      - name: Bauen
+        run: pio run
+
+      - name: Statische Analyse (cppcheck)
+        run: pio check --fail-on-defect high
+
+      - name: Formatierung prüfen (clang-format)
+        run: |
+          pip install clang-format
+          clang-format --dry-run -Werror src/*.cpp src/*.h include/Config.h include/Credentials.example.h

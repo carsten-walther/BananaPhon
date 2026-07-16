@@ -10,6 +10,11 @@ TouchSensor::TouchSensor(uint8_t pin, uint8_t note)
     , _onThreshold(0)
     , _offThreshold(0)
     , _lastBaselineUpdate(0)
+    , _aboveCount(0)
+    , _measuring(false)
+    , _measureStart(0)
+    , _peak(0)
+    , _velocity(DEFAULT_VELOCITY)
     , _pressed(false)
     , _pressedEvent(false)
     , _releasedEvent(false)
@@ -54,7 +59,47 @@ void TouchSensor::recalibrate()
     _pressedEvent  = false;
     _releasedEvent = false;
 
+    _measuring  = false;
+    _aboveCount = 0;
+
     _lastBaselineUpdate = millis();
+}
+
+// Schließt das Peak-Fenster ab: Velocity aus dem Spitzenwert berechnen
+// und das Press-Event auslösen.
+void TouchSensor::finishMeasurement()
+{
+    _measuring = false;
+
+    _pressed      = true;
+    _pressedEvent = true;
+
+    if (!ENABLE_TOUCH_VELOCITY)
+    {
+        _velocity = DEFAULT_VELOCITY;
+
+        return;
+    }
+
+    // Peak relativ zur Baseline linear auf VELOCITY_MIN..VELOCITY_MAX
+    // abbilden: ON-Schwelle -> MIN, RATIO_MAX -> MAX (mit Begrenzung).
+    float ratio = static_cast<float>(_peak) / static_cast<float>(_baseline);
+
+    float span = TOUCH_VELOCITY_RATIO_MAX - TOUCH_ON_RATIO;
+
+    float t = span > 0.0f ? (ratio - TOUCH_ON_RATIO) / span : 1.0f;
+
+    if (t < 0.0f)
+    {
+        t = 0.0f;
+    }
+
+    if (t > 1.0f)
+    {
+        t = 1.0f;
+    }
+
+    _velocity = VELOCITY_MIN + static_cast<uint8_t>(t * (VELOCITY_MAX - VELOCITY_MIN) + 0.5f);
 }
 
 void TouchSensor::update()
@@ -66,10 +111,46 @@ void TouchSensor::update()
     _releasedEvent = false;
 
 
-    if (!_pressed && _value > _onThreshold)
+    if (!_pressed && !_measuring)
     {
-        _pressed      = true;
-        _pressedEvent = true;
+        // Glitch-Filter: erst nach TOUCH_CONFIRM_SAMPLES Messungen in
+        // Folge über der ON-Schwelle beginnt der Anschlag — ein
+        // einzelner Ausreißer löst keine Geisternote aus.
+        _aboveCount = _value > _onThreshold ? _aboveCount + 1 : 0;
+
+        if (_aboveCount >= TOUCH_CONFIRM_SAMPLES)
+        {
+            _aboveCount = 0;
+
+            if (TOUCH_VELOCITY_WINDOW_MS == 0)
+            {
+                // Kein Fenster: sofort auslösen, Velocity aus dieser Messung
+                _peak = _value;
+
+                finishMeasurement();
+            }
+            else
+            {
+                _measuring    = true;
+                _measureStart = millis();
+                _peak         = _value;
+            }
+        }
+    }
+    else if (_measuring)
+    {
+        if (_value > _peak)
+        {
+            _peak = _value;
+        }
+
+        // Fenster abgelaufen — oder der Finger ist schon wieder weg
+        // (sehr kurzer Tipper): in beiden Fällen jetzt auslösen, das
+        // Release erledigt der Block darunter im selben Durchlauf.
+        if (millis() - _measureStart >= TOUCH_VELOCITY_WINDOW_MS || _value < _offThreshold)
+        {
+            finishMeasurement();
+        }
     }
 
     if (_pressed && _value < _offThreshold)
@@ -83,8 +164,8 @@ void TouchSensor::update()
     // TOUCH_BASELINE_INTERVAL_MS einen Filterschritt — so wird langsame
     // Drift (austrocknendes Gemüse, Temperatur) ausgeglichen, während
     // eine normale Berührung die Baseline praktisch nicht bewegt.
-    if (!_pressed && TOUCH_BASELINE_INTERVAL_MS > 0
-        && millis() - _lastBaselineUpdate >= TOUCH_BASELINE_INTERVAL_MS)
+    if (!_pressed && !_measuring && TOUCH_BASELINE_INTERVAL_MS > 0 &&
+        millis() - _lastBaselineUpdate >= TOUCH_BASELINE_INTERVAL_MS)
     {
         _lastBaselineUpdate = millis();
 
@@ -112,7 +193,7 @@ bool TouchSensor::isPressed()
 
 uint8_t TouchSensor::velocity()
 {
-    return DEFAULT_VELOCITY;
+    return _velocity;
 }
 
 uint32_t TouchSensor::value()
