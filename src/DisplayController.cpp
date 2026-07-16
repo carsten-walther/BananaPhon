@@ -380,8 +380,28 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
 
         if (fill > 0)
         {
-            display.fillRect(x + 2, PAD_Y + 2 + (PAD_INNER - fill), padWidth - 4, fill,
-                             velocityColor(velocity));
+            int32_t yTop = PAD_Y + 2 + (PAD_INNER - fill);
+
+            // Unten gerundet wie die Taste selbst: die Füllung liegt
+            // 2 px innerhalb, der passende (konzentrische) Radius ist
+            // also um 2 kleiner — bei sehr kleinem Füllstand begrenzt.
+            int32_t r = PAD_CORNER_RADIUS - 2;
+
+            if (r > fill / 2)
+            {
+                r = fill / 2;
+            }
+
+            if (r < 0)
+            {
+                r = 0;
+            }
+
+            display.fillRoundRect(x + 2, yTop, padWidth - 4, fill, r, velocityColor(velocity));
+
+            // Obere Ecken der Füllung wieder eckig machen — nur die
+            // Unterkante folgt der Tastenrundung
+            display.fillRect(x + 2, yTop, padWidth - 4, r, velocityColor(velocity));
         }
 
         // Peak-Marker auf Füllhöhe "aufziehen" und Haltezeit starten —
@@ -439,13 +459,15 @@ void DisplayController::updatePeaks()
 
         _peakPos[i] -= VELOCITY_PEAK_FALL_PX;
 
-        if (_peakPos[i] >= PEAK_MARKER_H)
+        if (_peakPos[i] >= PAD_CORNER_RADIUS + PEAK_MARKER_H)
         {
             drawPeakMarker(x, padWidth, _peakPos[i], _peakVelocity[i]);
         }
         else
         {
-            _peakPos[i] = 0; // unten angekommen — Marker verschwindet
+            // Kurz vor der gerundeten Unterkante verschwinden — so
+            // malt das Löschen nie in die Eckrundung hinein
+            _peakPos[i] = 0;
         }
 
         // Läuft der Marker durch den Notennamen-Bereich, Text auffrischen
