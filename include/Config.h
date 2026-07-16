@@ -53,6 +53,11 @@ constexpr uint8_t VELOCITY_MAX = 127;
 
 constexpr float TOUCH_VELOCITY_RATIO_MAX = 1.60f;
 
+// Peak-Hold auf dem Display: nach dem Loslassen bleibt eine dünne
+// Markerlinie auf der Höhe der letzten Velocity im Pad stehen — bis
+// zum nächsten Anschlag bzw. bis zur nächsten (Re-)Kalibrierung.
+constexpr bool ENABLE_VELOCITY_PEAK_HOLD = true;
+
 // Peak-Fenster in ms: nach dem Überschreiten der ON-Schwelle wird so
 // lange der Spitzenwert gesammelt, erst dann geht das NoteOn raus —
 // der Messwert steigt beim Auftreffen des Fingers noch einige ms an.

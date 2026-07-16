@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "Config.h"
+
 class DisplayController
 {
 public:
@@ -37,4 +39,7 @@ private:
 
     int _lastBatPercent = -1;
     bool _lastUsbPower  = false;
+
+    // Peak-Hold: letzte Velocity je Pad (0 = noch kein Anschlag)
+    uint8_t _lastVelocity[NUM_SENSORS] = {0};
 };

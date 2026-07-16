@@ -130,6 +130,12 @@ static void noteName(uint8_t note, char* buf, size_t len)
     snprintf(buf, len, "%s%d", names[note % 12], note / 12 - 1);
 }
 
+// Farbrampe der Velocity-Anzeige (VU-Stil)
+static uint16_t velocityColor(uint8_t velocity)
+{
+    return velocity < 60 ? TFT_GREEN : (velocity < 100 ? TFT_YELLOW : TFT_RED);
+}
+
 static void clearStatusLine()
 {
     display.fillRect(0, STATUS_Y, display.width(), STATUS_HEIGHT, TFT_BLACK);
@@ -149,6 +155,8 @@ void DisplayController::begin()
     display.init();
 
     display.setRotation(1);
+
+    display.setBrightness(255);
 
     display.fillScreen(TFT_BLACK);
 
@@ -180,6 +188,12 @@ void DisplayController::showPads()
 
     _statusDrawn = false;
 
+    // Neustart/Rekalibrierung: alte Peak-Hold-Marker verwerfen
+    for (uint8_t i = 0; i < NUM_SENSORS; i++)
+    {
+        _lastVelocity[i] = 0;
+    }
+
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
         drawPad(i, false);
@@ -199,6 +213,8 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
 
     if (pressed)
     {
+        _lastVelocity[index] = velocity;
+
         // Füllstand von unten, Höhe und Farbe nach Velocity (VU-Stil).
         // Als Rechteck 2 px innerhalb der abgerundeten Grundfläche,
         // damit die Ecken sauber bleiben.
@@ -206,10 +222,25 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
 
         if (fill > 0)
         {
-            uint16_t color = velocity < 60 ? TFT_GREEN : (velocity < 100 ? TFT_YELLOW : TFT_RED);
-
-            display.fillRect(x + 2, PAD_Y + 2 + (PAD_HEIGHT - 4 - fill), padWidth - 4, fill, color);
+            display.fillRect(x + 2, PAD_Y + 2 + (PAD_HEIGHT - 4 - fill), padWidth - 4, fill,
+                             velocityColor(velocity));
         }
+    }
+    else if (ENABLE_VELOCITY_PEAK_HOLD && _lastVelocity[index] > 0)
+    {
+        // Peak-Hold: dünne Markerlinie auf der Höhe der letzten
+        // Velocity, in derselben Farbrampe wie der Füllstand.
+        // Mindestens Markerhöhe, damit die Linie bei sehr kleiner
+        // Velocity nicht unter den Pad-Rand rutscht.
+        int32_t peak = (PAD_HEIGHT - 4) * _lastVelocity[index] / 127;
+
+        if (peak < 3)
+        {
+            peak = 3;
+        }
+
+        display.fillRect(x + 2, PAD_Y + 2 + (PAD_HEIGHT - 4 - peak), padWidth - 4, 3,
+                         velocityColor(_lastVelocity[index]));
     }
 
     display.setTextSize(2);
