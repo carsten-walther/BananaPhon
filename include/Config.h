@@ -19,7 +19,7 @@ constexpr bool ENABLE_WIFI_MIDI = true;
 constexpr bool ENABLE_USB_MIDI = false;
 
 // Gerätename (BLE-Advertising, RTP-MIDI/mDNS und Setup-Portal-AP)
-constexpr char MIDI_DEVICE_NAME[] = "Gemuese-MIDI-Device";
+constexpr char MIDI_DEVICE_NAME[] = "BananaPhon";
 
 // WLAN-Setup-Portal: kommt WIFI_PORTAL_AFTER_MS nach dem Start keine
 // Verbindung zustande (oder ist WIFI_SSID in Credentials.h leer),

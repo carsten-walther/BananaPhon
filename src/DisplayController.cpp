@@ -320,14 +320,14 @@ void DisplayController::begin()
     // Pads an der Unterkante verankern
     PAD_Y = display.height() - PAD_MARGIN_BOTTOM - PAD_HEIGHT;
 
-    display.setTextSize(1);
+    display.setTextSize(1.25);
 
     display.setTextDatum(textdatum_t::top_left);
 
     display.setTextColor(TFT_WHITE);
 
     // Kurzform — der volle Name würde in die zentrierte Icon-Leiste ragen
-    display.drawString("MIDI Device", 10, TITLE_Y);
+    display.drawString(MIDI_DEVICE_NAME, 10, TITLE_Y);
 }
 
 void DisplayController::showCalibrating()
@@ -340,7 +340,9 @@ void DisplayController::showCalibrating()
 
     display.setTextColor(TFT_WHITE);
 
-    display.drawString("Kalibriere Touch...", display.width() / 2, PAD_Y + PAD_HEIGHT / 2);
+    display.setTextDatum(textdatum_t::middle_center);
+
+    display.drawString("Calibrating", display.width() / 2, display.height() / 2);
 }
 
 void DisplayController::showPads()
