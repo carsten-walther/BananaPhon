@@ -42,4 +42,8 @@ public:
     // Arpeggio-Modus (Index in ARP_STEP_MS; 0 = aus)
     void setArp(uint8_t mode);
     uint8_t arp();
+
+    // Instrument (Instrument-Enum aus Drums.h)
+    void setInstrument(uint8_t instrument);
+    uint8_t instrument();
 };

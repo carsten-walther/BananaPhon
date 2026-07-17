@@ -7,6 +7,7 @@
 #include "MenuController.h"
 #include "MidiController.h"
 #include "Scales.h"
+#include "Drums.h"
 #include "Settings.h"
 #include "SpeakerController.h"
 #include "TouchSensor.h"
@@ -26,6 +27,9 @@ MenuController menu;
 // NoteOff muss exakt dieselbe Note treffen, auch wenn die Oktave
 // zwischen NoteOn und NoteOff umgestellt wurde.
 uint8_t playedNote[NUM_SENSORS] = {0};
+
+// Kanal des NoteOn (Drums: Kanal 10) — das NoteOff folgt ihm
+uint8_t playedChannel[NUM_SENSORS] = {0};
 
 // MIDI-Note mit Oktav-Shift, auf den gültigen Bereich begrenzt
 static uint8_t shiftedNote(uint8_t i)
@@ -79,7 +83,7 @@ static void recalibrateSensors(bool showUi = true)
         {
             if (noteViaMidi[i])
             {
-                midi.noteOff(playedNote[i]);
+                midi.noteOff(playedNote[i], playedChannel[i]);
             }
             else
             {
@@ -129,6 +133,8 @@ void setup()
 
     displayCtrl.setScale(Settings::scale());
 
+    displayCtrl.setInstrument(Settings::instrument());
+
     // Splash-Screen: Name + Version; währenddessen laufen Touch-
     // Kalibrierung und Funk-Initialisierung im Hintergrund
     uint32_t splashStart = millis();
@@ -152,6 +158,8 @@ void setup()
     speaker.setWaveform(Settings::waveform());
 
     speaker.setArp(Settings::arp());
+
+    speaker.setInstrument(Settings::instrument());
 
     encoder.begin();
 
@@ -197,11 +205,14 @@ void loop()
         {
             noteViaMidi[i] = !ENABLE_SPEAKER || midiConnected();
 
-            playedNote[i] = shiftedNote(i);
+            bool drums = Settings::instrument() == INST_DRUMS;
+
+            playedNote[i]    = drums ? drumNotes[i] : shiftedNote(i);
+            playedChannel[i] = drums ? DRUM_MIDI_CHANNEL : MIDI_CHANNEL;
 
             if (noteViaMidi[i])
             {
-                midi.noteOn(playedNote[i], sensors[i].velocity());
+                midi.noteOn(playedNote[i], sensors[i].velocity(), playedChannel[i]);
             }
             else
             {
@@ -221,7 +232,7 @@ void loop()
         {
             if (noteViaMidi[i])
             {
-                midi.noteOff(playedNote[i]);
+                midi.noteOff(playedNote[i], playedChannel[i]);
             }
             else
             {

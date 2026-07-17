@@ -5,6 +5,8 @@
 
 #include "Config.h"
 
+#include "Drums.h"
+
 namespace
 {
 // Eine Stimme pro Pad. Die Steuerfelder werden vom Loop-Task
@@ -19,6 +21,14 @@ struct Voice
     uint32_t step  = 0;     // Phasenschritt pro Sample (bestimmt die Tonhöhe)
     float amp      = 0.0f;  // aktuelle Hüllkurven-Amplitude
     float target   = 0.0f;  // Zielamplitude (Velocity bzw. 0 nach NoteOff)
+
+    // One-Shot-Betrieb (Drums): feste Ausklinghüllkurve, NoteOff wird
+    // ignoriert, optional fallende Tonhöhe und Rausch-Anteil
+    bool oneShot     = false;
+    float pitchDecay = 1.0f; // Tonhöhen-Abfall pro Sample
+    float ampDecay   = 1.0f; // Amplituden-Abfall pro Sample
+    float toneMix    = 1.0f;
+    float noiseMix   = 0.0f;
 };
 
 Voice voices[NUM_SENSORS];
@@ -31,6 +41,22 @@ float masterVolume = SPEAKER_MASTER_VOLUME;
 
 // Aktive Wellenform (Waveform-Enum); 8-Bit-Zugriff ist atomar
 uint8_t activeWaveform = WAVE_CHIP;
+
+// Aktives Instrument (Instrument-Enum aus Drums.h)
+uint8_t activeInstrument = INST_CHIP;
+
+// 16-Bit-LFSR-Rauschgenerator (NES-Stil) — gemeinsame Quelle für
+// alle Drum-Stimmen
+uint16_t noiseReg = 0xACE1u;
+
+inline int16_t noiseSample()
+{
+    uint16_t bit = ((noiseReg >> 0) ^ (noiseReg >> 1)) & 1u;
+
+    noiseReg = static_cast<uint16_t>((noiseReg >> 1) | (bit << 15));
+
+    return (noiseReg & 1u) ? 12000 : -12000;
+}
 
 // Arpeggio: Modus, Schrittlänge in Samples (0 = aus). Die Auswahl
 // der klingenden Stimme läuft komplett im Audio-Task; der Loop-Task
@@ -182,6 +208,40 @@ void audioTask(void*)
                     continue;
                 }
 
+                if (v.oneShot)
+                {
+                    // Drum: feste Ausklinghüllkurve + fallende Tonhöhe
+                    v.amp *= v.ampDecay;
+
+                    if (v.amp < 0.001f)
+                    {
+                        v.amp    = 0.0f;
+                        v.target = 0.0f;
+
+                        continue;
+                    }
+
+                    v.step = static_cast<uint32_t>(v.step * v.pitchDecay);
+
+                    v.phase += v.step;
+
+                    float s = 0.0f;
+
+                    if (v.toneMix > 0.0f)
+                    {
+                        s += sineLut[v.phase >> 22] * v.toneMix;
+                    }
+
+                    if (v.noiseMix > 0.0f)
+                    {
+                        s += noiseSample() * v.noiseMix;
+                    }
+
+                    mix += s * v.amp;
+
+                    continue;
+                }
+
                 // Lineare Hüllkurve Richtung Zielamplitude
                 if (v.amp < v.target)
                 {
@@ -289,6 +349,44 @@ void SpeakerController::begin()
 
 void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
 {
+    if (activeInstrument == INST_DRUMS)
+    {
+        // Drum-Index über die GM-Note finden; feste Stimme pro Drum
+        // (Retrigger startet den Sound neu, wie bei einem Drumcomputer)
+        for (uint8_t d = 0; d < NUM_SENSORS; d++)
+        {
+            if (drumNotes[d] != note)
+            {
+                continue;
+            }
+
+            Voice& v = voices[d];
+
+            const DrumSpec& spec = drumSpecs[d];
+
+            v.note       = note;
+            v.gate       = false; // One-Shot: kein Gate, Arp bleibt inaktiv
+            v.oneShot    = true;
+            v.phase      = 0;
+            v.step       = spec.freq > 0.0f
+                               ? static_cast<uint32_t>(spec.freq / SPEAKER_SAMPLE_RATE * 4294967296.0f)
+                               : 0;
+            v.pitchDecay = spec.pitchDecay;
+            v.ampDecay   = spec.ampDecay;
+            v.toneMix    = spec.toneMix;
+            v.noiseMix   = spec.noiseMix;
+
+            // Schlagstärke direkt setzen — der harte Einsatz gehört
+            // zum Drum-Transienten (Sinus startet bei Phase 0)
+            v.amp    = velocity / 127.0f;
+            v.target = v.amp;
+
+            return;
+        }
+
+        return; // unbekannte Note im Drum-Modus: ignorieren
+    }
+
     // Gleiche Note erneut? Dann diese Stimme neu anschlagen.
     for (auto& v : voices)
     {
@@ -307,6 +405,8 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
         if (!v.gate && v.amp <= 0.0f)
         // cppcheck-suppress useStlAlgorithm
         {
+            v.oneShot = false;
+
             v.note   = note;
             v.step   = stepForNote(note);
             v.phase  = 0;
@@ -330,6 +430,8 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
         }
     }
 
+    quietest->oneShot = false;
+
     quietest->note   = note;
     quietest->step   = stepForNote(note);
     quietest->target = velocity / 127.0f;
@@ -338,6 +440,7 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
 
 void SpeakerController::noteOff(uint8_t note)
 {
+    // One-Shots (Drums) klingen ihre feste Hüllkurve aus
     for (auto& v : voices)
     {
         if (v.gate && v.note == note)
@@ -407,4 +510,19 @@ void SpeakerController::setArp(uint8_t mode)
 uint8_t SpeakerController::arp()
 {
     return arpMode;
+}
+
+void SpeakerController::setInstrument(uint8_t instrument)
+{
+    if (instrument >= INST_COUNT)
+    {
+        instrument = INST_CHIP;
+    }
+
+    activeInstrument = instrument;
+}
+
+uint8_t SpeakerController::instrument()
+{
+    return activeInstrument;
 }

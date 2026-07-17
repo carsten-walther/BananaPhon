@@ -43,6 +43,9 @@ public:
     void setOctave(int8_t octave);
     void setScale(uint8_t scale);
 
+    // Instrument: Drums zeigen Kürzel (KD, SN, …) statt Notennamen
+    void setInstrument(uint8_t instrument);
+
     // Räumt eine abgelaufene Einblendung weg — aus loop() aufrufen
     void updateToast();
 
@@ -83,4 +86,6 @@ private:
     int8_t _octave = 0;
 
     uint8_t _scale = 0;
+
+    uint8_t _instrument = 0;
 };

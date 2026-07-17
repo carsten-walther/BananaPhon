@@ -3,6 +3,7 @@
 #include <Preferences.h>
 
 #include "Config.h"
+#include "Drums.h"
 #include "Scales.h"
 #include "SpeakerController.h"
 
@@ -14,6 +15,7 @@ float vol    = SPEAKER_MASTER_VOLUME;
 uint8_t wf   = WAVE_TRIANGLE;
 uint8_t sc   = SCALE_MAJOR;
 uint8_t arpM = 0;
+uint8_t inst = INST_CHIP;
 int8_t oct   = 0;
 } // namespace
 
@@ -25,6 +27,7 @@ void Settings::begin()
     wf   = prefs.getUChar("wave", WAVE_TRIANGLE);
     sc   = prefs.getUChar("scale", SCALE_MAJOR);
     arpM = prefs.getUChar("arp", 0);
+    inst = prefs.getUChar("inst", INST_CHIP);
     oct  = prefs.getChar("oct", 0);
 
     // Gegen ungültige Altbestände absichern (z. B. nach Firmware-Wechsel)
@@ -48,6 +51,11 @@ void Settings::begin()
         arpM = 0;
     }
 
+    if (inst >= INST_COUNT)
+    {
+        inst = INST_CHIP;
+    }
+
     if (oct < -OCTAVE_RANGE || oct > OCTAVE_RANGE)
     {
         oct = 0;
@@ -60,6 +68,7 @@ void Settings::save()
     prefs.putUChar("wave", wf);
     prefs.putUChar("scale", sc);
     prefs.putUChar("arp", arpM);
+    prefs.putUChar("inst", inst);
     prefs.putChar("oct", oct);
 }
 
@@ -101,6 +110,16 @@ uint8_t Settings::arp()
 void Settings::setArp(uint8_t arp)
 {
     arpM = arp;
+}
+
+uint8_t Settings::instrument()
+{
+    return inst;
+}
+
+void Settings::setInstrument(uint8_t instrument)
+{
+    inst = instrument;
 }
 
 int8_t Settings::octave()

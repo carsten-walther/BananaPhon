@@ -21,6 +21,9 @@ void setScale(uint8_t scale);
 uint8_t arp();
 void setArp(uint8_t arp);
 
+uint8_t instrument();
+void setInstrument(uint8_t instrument);
+
 int8_t octave();
 void setOctave(int8_t octave);
 } // namespace Settings

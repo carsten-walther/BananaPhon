@@ -178,14 +178,14 @@ void MidiController::update()
     midiOut.task();
 }
 
-void MidiController::noteOn(uint8_t note, uint8_t velocity)
+void MidiController::noteOn(uint8_t note, uint8_t velocity, uint8_t channel)
 {
-    midiOut.sendNoteOn(MIDI_CHANNEL, note, velocity);
+    midiOut.sendNoteOn(channel, note, velocity);
 }
 
-void MidiController::noteOff(uint8_t note)
+void MidiController::noteOff(uint8_t note, uint8_t channel)
 {
-    midiOut.sendNoteOff(MIDI_CHANNEL, note, 0);
+    midiOut.sendNoteOff(channel, note, 0);
 }
 
 bool MidiController::bleConnected()

@@ -25,6 +25,13 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   Fingerspitze; per Peak-Fenster (~10 ms) wird der Spitzenwert des
   Anschlags erfasst
 - **BLE-MIDI**: erscheint als Bluetooth-MIDI-Gerät (macOS, iOS, Windows 10+)
+- **Drumkit-Modus**: die sieben Pads werden zu Kick, Snare, HiHats
+  (zu/offen), zwei Toms und Clap — per MIDI als General-MIDI-
+  Percussion auf Kanal 10 (jede DAW spielt sofort ein echtes
+  Schlagzeug), am Lautsprecher als 808-Stil-Synthese (Sinus mit
+  Tonhöhen-Hüllkurve + LFSR-Rauschen, One-Shots mit Schlagstärke
+  aus der Anschlagsdynamik); Kit-Rezepte in
+  [`include/Drums.h`](include/Drums.h)
 - **Standalone-Betrieb mit Lautsprecher**: ohne verbundenes
   MIDI-Ziel spielt ein I2S-Verstärker (MAX98357A) die Noten direkt —
   polyphon mit einer Stimme pro Pad, Wellenform wählbar (Default:
@@ -32,7 +39,8 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   in der Statusleiste zeigt den Modus
 - **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
   PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
-  Menü und wechselt zwischen **Lautstärke**, **Wellenform**
+  Menü und wechselt zwischen **Lautstärke**, **Sound** (Chip/Drums),
+  **Wellenform**
   (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Arpeggio**
   (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
   schnelle Notenfolge zerlegt), **Skala** (Dur, Moll,

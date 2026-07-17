@@ -4,6 +4,7 @@
 
 #include "Config.h"
 #include "DisplayController.h"
+#include "Drums.h"
 #include "Scales.h"
 #include "Settings.h"
 #include "SpeakerController.h"
@@ -13,6 +14,7 @@ namespace
 enum Item : uint8_t
 {
     ITEM_VOLUME = 0,
+    ITEM_INSTRUMENT,
     ITEM_WAVEFORM,
     ITEM_ARP,
     ITEM_SCALE,
@@ -41,6 +43,10 @@ void MenuController::show()
     {
     case ITEM_WAVEFORM:
         snprintf(text, sizeof(text), "Waveform: %s", waveformNames[Settings::waveform()]);
+        break;
+
+    case ITEM_INSTRUMENT:
+        snprintf(text, sizeof(text), "Sound: %s", instrumentNames[Settings::instrument()]);
         break;
 
     case ITEM_ARP:
@@ -140,6 +146,27 @@ void MenuController::handleRotation(int32_t detents)
         Settings::setWaveform(static_cast<uint8_t>(wf));
 
         _speaker->setWaveform(static_cast<uint8_t>(wf));
+
+        break;
+    }
+
+    case ITEM_INSTRUMENT:
+    {
+        int32_t in = (Settings::instrument() + detents) % INST_COUNT;
+
+        if (in < 0)
+        {
+            in += INST_COUNT;
+        }
+
+        Settings::setInstrument(static_cast<uint8_t>(in));
+
+        _speaker->setInstrument(static_cast<uint8_t>(in));
+
+        // Tastenbeschriftung wechselt zwischen Noten und Drum-Kürzeln
+        _display->setInstrument(static_cast<uint8_t>(in));
+
+        _display->showPads();
 
         break;
     }

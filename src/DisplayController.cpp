@@ -2,6 +2,8 @@
 
 #include "Config.h"
 
+#include "Drums.h"
+
 #include "Scales.h"
 
 #include <LovyanGFX.hpp>
@@ -271,11 +273,19 @@ static void drawBlackKeysAround(uint8_t index)
 
 // Zeichnet den Notennamen unten ins Pad. `onFill` = Text liegt auf der
 // hellen Velocity-Füllung (dann schwarz für den Kontrast).
-static void drawPadLabel(uint8_t index, int32_t x, int32_t padWidth, int8_t octave, uint8_t scale)
+static void drawPadLabel(uint8_t index, int32_t x, int32_t padWidth, int8_t octave, uint8_t scale,
+                         uint8_t instrument)
 {
     char label[8];
 
-    noteName(scaleNote(scale, index) + octave * 12, label, sizeof(label));
+    if (instrument == INST_DRUMS)
+    {
+        snprintf(label, sizeof(label), "%s", drumLabels[index]);
+    }
+    else
+    {
+        noteName(scaleNote(scale, index) + octave * 12, label, sizeof(label));
+    }
 
     display.setFont(&fonts::DejaVu18);
 
@@ -356,7 +366,7 @@ void DisplayController::showSplash()
     display.drawString(MIDI_DEVICE_NAME, display.width() / 2, display.height() / 2 - 20);
 
     display.unloadFont();
-    
+
     // Versionsnummer darunter
     display.setFont(&fonts::DejaVu12);
 
@@ -497,10 +507,14 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
     }
 
     // Notenname unten auf der Taste
-    drawPadLabel(index, x, padWidth, _octave, _scale);
+    drawPadLabel(index, x, padWidth, _octave, _scale, _instrument);
 
-    // Angrenzende Obertasten wieder "nach vorne" holen
-    drawBlackKeysAround(index);
+    // Angrenzende Obertasten wieder "nach vorne" holen (nur bei
+    // Melodie-Instrumenten — ein Drumkit ist kein Klavier)
+    if (_instrument != INST_DRUMS)
+    {
+        drawBlackKeysAround(index);
+    }
 }
 
 void DisplayController::setOctave(int8_t octave)
@@ -511,6 +525,11 @@ void DisplayController::setOctave(int8_t octave)
 void DisplayController::setScale(uint8_t scale)
 {
     _scale = scale;
+}
+
+void DisplayController::setInstrument(uint8_t instrument)
+{
+    _instrument = instrument;
 }
 
 void DisplayController::showToast(const char* text, uint32_t durationMs)
@@ -599,7 +618,7 @@ void DisplayController::updatePeaks()
         // Läuft der Marker durch den Notennamen-Bereich, Text auffrischen
         if (oldPos <= PAD_LABEL_ZONE || _peakPos[i] <= PAD_LABEL_ZONE)
         {
-            drawPadLabel(i, x, padWidth, _octave, _scale);
+            drawPadLabel(i, x, padWidth, _octave, _scale, _instrument);
         }
 
         // Im Bereich der Obertasten: die Deko wieder nach vorne holen
