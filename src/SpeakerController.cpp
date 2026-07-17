@@ -74,6 +74,13 @@ int16_t oscSample(uint32_t phase, uint8_t wf)
     case WAVE_SINE:
         return sineLut[phase >> 22];
 
+    case WAVE_CHIP:
+        // 80s-Chiptune (NES-Stil): Pulswelle mit 25 % Tastverhältnis —
+        // klingt hohl-nasal statt kantig. Die 8-Bit-Quantisierung
+        // passiert in der Mix-Stufe (siehe audioTask), wo sie auf
+        // Hüllkurve und Stimmen-Summe wirkt.
+        return phase < 0x40000000u ? 26000 : -26000;
+
     case WAVE_TRIANGLE:
     default:
         return triangle(phase);
@@ -137,6 +144,14 @@ void audioTask(void*)
             if (s < -32768)
             {
                 s = -32768;
+            }
+
+            // Chiptune: Ausgang auf 256 Stufen rastern (8 Bit) —
+            // Hüllkurven und Ausklingen bekommen so das typische
+            // "Zipper"-Treppchen der 80er-Soundchips
+            if (activeWaveform == WAVE_CHIP)
+            {
+                s &= ~0xFF;
             }
 
             // Gleiches Sample auf beide Kanäle (der MAX98357A mischt

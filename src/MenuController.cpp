@@ -21,7 +21,7 @@ enum Item : uint8_t
 };
 
 // Ohne Umlaute — die geladene DejaVu-Schrift deckt ASCII sicher ab
-const char* waveformNames[WAVE_COUNT] = {"Triangle", "Rectangle", "Saw", "Sine"};
+const char* waveformNames[WAVE_COUNT] = {"Triangle", "Rectangle", "Saw", "Sine", "8-Bit"};
 } // namespace
 
 void MenuController::begin(SpeakerController* speaker, DisplayController* display)

@@ -9,6 +9,7 @@ enum Waveform : uint8_t
     WAVE_SQUARE,
     WAVE_SAW,
     WAVE_SINE,
+    WAVE_CHIP, // 8-Bit/Chiptune: 25%-Puls mit 8-Bit-Quantisierung
 
     WAVE_COUNT
 };
