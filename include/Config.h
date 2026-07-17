@@ -86,16 +86,10 @@ constexpr uint8_t NUM_SENSORS = 7;
 // oder englisch (B). Betrifft nur die Anzeige, nie die MIDI-Noten.
 constexpr bool USE_GERMAN_NOTE_NAMES = true;
 
-// MIDI-Noten
-constexpr uint8_t midiNotes[NUM_SENSORS] = {
-    60, // C4
-    62, // D4
-    64, // E4
-    65, // F4
-    67, // G4
-    69, // A4
-    71  // H4
-};
+// Grundton der Skalen (C4); die Zuordnung der Pads zu Noten ergibt
+// sich aus der im Menü gewählten Skala (include/Scales.h) plus
+// Oktav-Shift
+constexpr uint8_t SCALE_ROOT_NOTE = 60;
 
 // Touch-Pins
 //

@@ -9,10 +9,12 @@ class TouchSensor
 public:
     TouchSensor() = default;
 
-    // Pin und Note zuweisen — vor recalibrate() aufrufen. Getrennt vom
+    // Pin zuweisen — vor recalibrate() aufrufen. Getrennt vom
     // Konstruktor, damit die Sensoren als statisches Array (ohne Heap)
-    // angelegt und in setup() aus Config-Tabellen bestückt werden können.
-    void configure(uint8_t pin, uint8_t note);
+    // angelegt und in setup() aus Config-Tabellen bestückt werden
+    // können. Die MIDI-Note ergibt sich seit der Skalen-Umstellung
+    // zur Laufzeit aus Skala + Oktave (siehe main.cpp).
+    void configure(uint8_t pin);
 
     void recalibrate();
     void update();
@@ -23,11 +25,9 @@ public:
     uint8_t velocity();
     uint32_t value();
     uint32_t baseline();
-    uint8_t note();
 
 private:
-    uint8_t _pin  = 0;
-    uint8_t _note = 0;
+    uint8_t _pin = 0;
 
     uint32_t _value              = 0;
     uint32_t _baseline           = 0;

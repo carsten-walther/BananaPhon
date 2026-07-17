@@ -29,7 +29,8 @@ Pads, den Verbindungsstatus und den Batteriestand.
 - **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
   PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
   Menü und wechselt zwischen **Lautstärke**, **Wellenform**
-  (Dreieck/Rechteck/Sägezahn/Sinus) und **Oktave** (±2), Drehen
+  (Dreieck/Rechteck/Sägezahn/Sinus), **Skala** (Dur, Moll,
+  Pentatonik, Blues) und **Oktave** (±2), Drehen
   ändert den Wert; ohne Menü wirkt Drehen als Lautstärke-
   Schnellzugriff. Alle Werte landen im NVS-Flash und überleben
   Neustarts — konfigurieren statt kompilieren
@@ -150,7 +151,9 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
   `ENABLE_VELOCITY_PEAK_HOLD` mit Haltezeit `VELOCITY_PEAK_HOLD_MS`
   und Fallgeschwindigkeit `VELOCITY_PEAK_FALL_*`) — der serielle Monitor zeigt die
   gesendete Velocity pro NoteOn zum Einstellen der Kennlinie
-- Noten- und Pin-Zuordnung der Sensoren; Notennamen auf dem Display
+- Grundton der Skalen (`SCALE_ROOT_NOTE`), Intervalltabellen in
+  [`include/Scales.h`](include/Scales.h); Pin-Zuordnung der Sensoren;
+  Notennamen auf dem Display
   wahlweise deutsch (H4) oder englisch (B4) via `USE_GERMAN_NOTE_NAMES`
 - Touch-Empfindlichkeit (`TOUCH_ON_RATIO` / `TOUCH_OFF_RATIO`)
 - Baseline-Nachführung (`TOUCH_BASELINE_INTERVAL_MS` = 0 schaltet sie ab,

@@ -6,6 +6,7 @@
 #include "EncoderController.h"
 #include "MenuController.h"
 #include "MidiController.h"
+#include "Scales.h"
 #include "Settings.h"
 #include "SpeakerController.h"
 #include "TouchSensor.h"
@@ -29,7 +30,7 @@ uint8_t playedNote[NUM_SENSORS] = {0};
 // MIDI-Note mit Oktav-Shift, auf den gültigen Bereich begrenzt
 static uint8_t shiftedNote(uint8_t i)
 {
-    int32_t note = midiNotes[i] + Settings::octave() * 12;
+    int32_t note = scaleNote(Settings::scale(), i) + Settings::octave() * 12;
 
     if (note < 0)
     {
@@ -120,12 +121,14 @@ void setup()
 
     displayCtrl.setOctave(Settings::octave());
 
+    displayCtrl.setScale(Settings::scale());
+
     displayCtrl.showCalibrating();
 
     // Sensoren konfigurieren und kalibrieren (dabei nicht berühren!)
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
-        sensors[i].configure(touchPins[i], midiNotes[i]);
+        sensors[i].configure(touchPins[i]);
     }
 
     recalibrateSensors();
@@ -188,7 +191,7 @@ void loop()
 
             // Tuning-Hilfe für TOUCH_VELOCITY_RATIO_MAX (siehe Config.h)
             Serial.print("NoteOn ");
-            Serial.print(sensors[i].note());
+            Serial.print(playedNote[i]);
             Serial.print(" vel ");
             Serial.println(sensors[i].velocity());
         }

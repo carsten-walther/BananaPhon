@@ -2,10 +2,9 @@
 
 #include "Config.h"
 
-void TouchSensor::configure(uint8_t pin, uint8_t note)
+void TouchSensor::configure(uint8_t pin)
 {
-    _pin  = pin;
-    _note = note;
+    _pin = pin;
 }
 
 // Misst die Baseline neu und setzt die Schwellwerte. Blockiert für
@@ -186,9 +185,4 @@ uint32_t TouchSensor::value()
 uint32_t TouchSensor::baseline()
 {
     return _baseline;
-}
-
-uint8_t TouchSensor::note()
-{
-    return _note;
 }

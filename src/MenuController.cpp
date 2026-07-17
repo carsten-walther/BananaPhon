@@ -4,6 +4,7 @@
 
 #include "Config.h"
 #include "DisplayController.h"
+#include "Scales.h"
 #include "Settings.h"
 #include "SpeakerController.h"
 
@@ -13,13 +14,14 @@ enum Item : uint8_t
 {
     ITEM_VOLUME = 0,
     ITEM_WAVEFORM,
+    ITEM_SCALE,
     ITEM_OCTAVE,
 
     ITEM_COUNT
 };
 
 // Ohne Umlaute — die geladene DejaVu-Schrift deckt ASCII sicher ab
-const char* waveformNames[WAVE_COUNT] = {"Dreieck", "Rechteck", "Saege", "Sinus"};
+const char* waveformNames[WAVE_COUNT] = {"Triangle", "Rectangle", "Saw", "Sine"};
 } // namespace
 
 void MenuController::begin(SpeakerController* speaker, DisplayController* display)
@@ -35,16 +37,16 @@ void MenuController::show()
     switch (_item)
     {
     case ITEM_WAVEFORM:
-        snprintf(text, sizeof(text), "Welle: %s", waveformNames[Settings::waveform()]);
+        snprintf(text, sizeof(text), "Waveform: %s", waveformNames[Settings::waveform()]);
         break;
 
     case ITEM_OCTAVE:
-        snprintf(text, sizeof(text), "Oktave: %+d", Settings::octave());
+        snprintf(text, sizeof(text), "Octave: %+d", Settings::octave());
         break;
 
     case ITEM_VOLUME:
     default:
-        snprintf(text, sizeof(text), "Lautst. %d%%",
+        snprintf(text, sizeof(text), "Volume: %d%%",
                  static_cast<int>(Settings::volume() * 100.0f + 0.5f));
         break;
     }
@@ -105,7 +107,7 @@ void MenuController::handleRotation(int32_t detents)
 
         char text[16];
 
-        snprintf(text, sizeof(text), "Vol %d%%",
+        snprintf(text, sizeof(text), "Volume: %d%%",
                  static_cast<int>(Settings::volume() * 100.0f + 0.5f));
 
         _display->showToast(text);

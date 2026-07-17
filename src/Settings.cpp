@@ -3,6 +3,7 @@
 #include <Preferences.h>
 
 #include "Config.h"
+#include "Scales.h"
 #include "SpeakerController.h"
 
 namespace
@@ -11,6 +12,7 @@ Preferences prefs;
 
 float vol  = SPEAKER_MASTER_VOLUME;
 uint8_t wf = WAVE_TRIANGLE;
+uint8_t sc = SCALE_MAJOR;
 int8_t oct = 0;
 } // namespace
 
@@ -20,6 +22,7 @@ void Settings::begin()
 
     vol = prefs.getFloat("vol", SPEAKER_MASTER_VOLUME);
     wf  = prefs.getUChar("wave", WAVE_TRIANGLE);
+    sc  = prefs.getUChar("scale", SCALE_MAJOR);
     oct = prefs.getChar("oct", 0);
 
     // Gegen ungültige Altbestände absichern (z. B. nach Firmware-Wechsel)
@@ -33,6 +36,11 @@ void Settings::begin()
         wf = WAVE_TRIANGLE;
     }
 
+    if (sc >= SCALE_COUNT)
+    {
+        sc = SCALE_MAJOR;
+    }
+
     if (oct < -OCTAVE_RANGE || oct > OCTAVE_RANGE)
     {
         oct = 0;
@@ -43,6 +51,7 @@ void Settings::save()
 {
     prefs.putFloat("vol", vol);
     prefs.putUChar("wave", wf);
+    prefs.putUChar("scale", sc);
     prefs.putChar("oct", oct);
 }
 
@@ -64,6 +73,16 @@ uint8_t Settings::waveform()
 void Settings::setWaveform(uint8_t waveform)
 {
     wf = waveform;
+}
+
+uint8_t Settings::scale()
+{
+    return sc;
+}
+
+void Settings::setScale(uint8_t scale)
+{
+    sc = scale;
 }
 
 int8_t Settings::octave()

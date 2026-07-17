@@ -31,9 +31,10 @@ public:
     // Tasten; verschwindet nach `durationMs` von selbst
     void showToast(const char* text, uint32_t durationMs = DISPLAY_TOAST_MS);
 
-    // Oktav-Shift für die Tastenbeschriftung (Anzeige folgt den
-    // tatsächlich gespielten Noten); danach showPads() aufrufen
+    // Oktav-Shift und Skala für die Tastenbeschriftung (Anzeige folgt
+    // den tatsächlich gespielten Noten); danach showPads() aufrufen
     void setOctave(int8_t octave);
+    void setScale(uint8_t scale);
 
     // Räumt eine abgelaufene Einblendung weg — aus loop() aufrufen
     void updateToast();
@@ -73,4 +74,6 @@ private:
     uint32_t _toastUntil = 0;
 
     int8_t _octave = 0;
+
+    uint8_t _scale = 0;
 };

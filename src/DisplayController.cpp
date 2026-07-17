@@ -2,6 +2,8 @@
 
 #include "Config.h"
 
+#include "Scales.h"
+
 #include <LovyanGFX.hpp>
 
 // ------------------------------------------------
@@ -269,11 +271,11 @@ static void drawBlackKeysAround(uint8_t index)
 
 // Zeichnet den Notennamen unten ins Pad. `onFill` = Text liegt auf der
 // hellen Velocity-Füllung (dann schwarz für den Kontrast).
-static void drawPadLabel(uint8_t index, int32_t x, int32_t padWidth, int8_t octave)
+static void drawPadLabel(uint8_t index, int32_t x, int32_t padWidth, int8_t octave, uint8_t scale)
 {
     char label[8];
 
-    noteName(midiNotes[index] + octave * 12, label, sizeof(label));
+    noteName(scaleNote(scale, index) + octave * 12, label, sizeof(label));
 
     display.setFont(&fonts::DejaVu18);
 
@@ -430,7 +432,7 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
     }
 
     // Notenname unten auf der Taste
-    drawPadLabel(index, x, padWidth, _octave);
+    drawPadLabel(index, x, padWidth, _octave, _scale);
 
     // Angrenzende Obertasten wieder "nach vorne" holen
     drawBlackKeysAround(index);
@@ -439,6 +441,11 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
 void DisplayController::setOctave(int8_t octave)
 {
     _octave = octave;
+}
+
+void DisplayController::setScale(uint8_t scale)
+{
+    _scale = scale;
 }
 
 void DisplayController::showToast(const char* text, uint32_t durationMs)
@@ -527,7 +534,7 @@ void DisplayController::updatePeaks()
         // Läuft der Marker durch den Notennamen-Bereich, Text auffrischen
         if (oldPos <= PAD_LABEL_ZONE || _peakPos[i] <= PAD_LABEL_ZONE)
         {
-            drawPadLabel(i, x, padWidth, _octave);
+            drawPadLabel(i, x, padWidth, _octave, _scale);
         }
 
         // Im Bereich der Obertasten: die Deko wieder nach vorne holen
