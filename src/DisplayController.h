@@ -27,6 +27,13 @@ public:
     // VELOCITY_PEAK_FALL_INTERVAL_MS getaktet, sonst ein No-Op).
     void updatePeaks();
 
+    // Kurzzeitige Einblendung im Freiraum zwischen Statusleiste und
+    // Tasten (verschwindet nach DISPLAY_TOAST_MS von selbst)
+    void showToast(const char* text);
+
+    // Räumt eine abgelaufene Einblendung weg — aus loop() aufrufen
+    void updateToast();
+
     // Aktualisiert die Statuszeile; zeichnet nur bei Änderung neu.
     // `portal` = WLAN-Setup-Portal aktiv, `speaker` = Standalone-
     // Betrieb über den Lautsprecher (kein MIDI-Ziel verbunden).
@@ -58,4 +65,6 @@ private:
     bool _padPressed[NUM_SENSORS]        = {false};
 
     uint32_t _lastPeakStep = 0;
+
+    uint32_t _toastUntil = 0;
 };

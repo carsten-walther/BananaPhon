@@ -3,6 +3,7 @@
 #include "Config.h"
 
 #include "DisplayController.h"
+#include "EncoderController.h"
 #include "MidiController.h"
 #include "SpeakerController.h"
 #include "TouchSensor.h"
@@ -13,6 +14,8 @@ TouchSensor sensors[NUM_SENSORS];
 MidiController midi;
 
 SpeakerController speaker;
+
+EncoderController encoder;
 
 DisplayController displayCtrl;
 
@@ -100,6 +103,8 @@ void setup()
 
     speaker.begin();
 
+    encoder.begin();
+
     displayCtrl.showBattery(readBatteryMilliVolts());
 }
 
@@ -182,6 +187,31 @@ void loop()
 
     // Fallende Peak-Marker animieren (intern getaktet)
     displayCtrl.updatePeaks();
+
+    displayCtrl.updateToast();
+
+    // Encoder: im Standalone-Betrieb regelt Drehen die Lautstärke,
+    // ein Druck zeigt den aktuellen Wert an
+    encoder.update();
+
+    int32_t detents = encoder.readDetents();
+
+    bool standalone = ENABLE_SPEAKER && !midiConnected();
+
+    if (standalone && (detents != 0 || encoder.clicked()))
+    {
+        if (detents != 0)
+        {
+            speaker.setVolume(speaker.volume() + detents * ENCODER_VOLUME_STEP);
+        }
+
+        char toast[16];
+
+        snprintf(toast, sizeof(toast), "Volume %d%%",
+                 static_cast<int>(speaker.volume() * 100.0f + 0.5f));
+
+        displayCtrl.showToast(toast);
+    }
 
     // Statuszeile höchstens alle 500 ms prüfen
     if (millis() - lastStatusUpdate > 500)

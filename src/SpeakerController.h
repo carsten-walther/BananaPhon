@@ -17,4 +17,9 @@ public:
     // Alle Stimmen ausklingen lassen — z. B. beim Wechsel in den
     // MIDI-Betrieb, damit nichts endlos weiterdudelt
     void allNotesOff();
+
+    // Gesamtlautstärke zur Laufzeit (0.0–1.0), z. B. vom Encoder;
+    // Startwert ist SPEAKER_MASTER_VOLUME aus der Config
+    void setVolume(float volume);
+    float volume();
 };

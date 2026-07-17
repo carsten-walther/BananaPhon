@@ -26,6 +26,9 @@ Voice voices[NUM_SENSORS];
 float attackPerSample  = 0.0f;
 float releasePerSample = 0.0f;
 
+// Laufzeit-Lautstärke; 32-Bit-Float-Zugriff ist auf dem Xtensa atomar
+float masterVolume = SPEAKER_MASTER_VOLUME;
+
 // Frames pro Renderblock (Stereo, 16 Bit) — bei 22,05 kHz sind
 // 128 Frames ~5,8 ms Latenz pro Block
 constexpr int FRAMES = 128;
@@ -94,7 +97,7 @@ void audioTask(void*)
             }
 
             // Kopffreiheit: durch die Stimmenzahl teilen, dann Master
-            mix *= SPEAKER_MASTER_VOLUME / NUM_SENSORS;
+            mix *= masterVolume / NUM_SENSORS;
 
             int32_t s = static_cast<int32_t>(mix);
 
@@ -228,4 +231,24 @@ void SpeakerController::allNotesOff()
         v.gate   = false;
         v.target = 0.0f;
     }
+}
+
+void SpeakerController::setVolume(float volume)
+{
+    if (volume < 0.0f)
+    {
+        volume = 0.0f;
+    }
+
+    if (volume > 1.0f)
+    {
+        volume = 1.0f;
+    }
+
+    masterVolume = volume;
+}
+
+float SpeakerController::volume()
+{
+    return masterVolume;
 }

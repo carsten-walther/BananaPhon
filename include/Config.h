@@ -195,14 +195,25 @@ constexpr uint8_t DISPLAY_ROTATION = 3;
 // Display Helligkeit 0 ... 255
 constexpr uint8_t DISPLAY_BRIGHNESS = 255;
 
+// Anzeigedauer für kurzzeitige Einblendungen (z. B. Lautstärke)
+constexpr uint32_t DISPLAY_TOAST_MS = 1500;
+
 // ------------------------------------------------
-// Rotary-Encoder (reserviert, noch nicht implementiert)
+// Rotary-Encoder
 // ------------------------------------------------
 
 // EC11/KY-040 an der Stiftleiste: A/B als Quadratursignal (Auswertung
-// später per PCNT-Hardware), SW als Taster gegen GND (Pull-up intern).
+// per PCNT-Hardware), SW als Taster gegen GND (Pull-up intern).
 // Hinweis: 43/44 sind U0TXD/U0RXD — frei nutzbar, weil der serielle
 // Monitor auf dem S3 über natives USB-CDC läuft, nicht über UART0.
-constexpr uint8_t PIN_ENCODER_A  = 21;
+constexpr bool ENABLE_ENCODER = true;
+
+constexpr uint8_t PIN_ENCODER_A  = 43;
 constexpr uint8_t PIN_ENCODER_B  = 44;
-constexpr uint8_t PIN_ENCODER_SW = 43;
+constexpr uint8_t PIN_ENCODER_SW = 21;
+
+// Zählimpulse pro Raste (EC11: 4 bei voller Quadratur-Auswertung)
+constexpr int32_t ENCODER_STEPS_PER_DETENT = 4;
+
+// Lautstärkeänderung pro Raste im Standalone-Betrieb
+constexpr float ENCODER_VOLUME_STEP = 0.05f;

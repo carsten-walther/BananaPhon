@@ -27,6 +27,10 @@ Pads, den Verbindungsstatus und den Batteriestand.
   die Noten direkt — polyphon mit einer Dreieck-Stimme pro Pad,
   Velocity steuert die Lautstärke; Lautsprecher-Icon in der
   Statusleiste zeigt den Modus
+- **Rotary-Encoder** (EC11/KY-040 an GPIO 21/44/43, per
+  PCNT-Hardware ausgewertet): im Standalone-Betrieb regelt Drehen
+  die Lautstärke, ein Druck zeigt den aktuellen Wert — Grundstein
+  für das geplante Settings-Menü
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
   öffnet das Gerät ein Captive Portal (AP "BananaPhon",
   http://192.168.4.1, Zahnrad-Icon in der Statusleiste) — dort eingetragene Zugangsdaten überleben

@@ -436,6 +436,41 @@ void DisplayController::drawPad(uint8_t index, bool pressed, uint8_t velocity)
     drawBlackKeysAround(index);
 }
 
+void DisplayController::showToast(const char* text)
+{
+    // Freiraum zwischen Statusleiste und Tasten
+    int32_t zoneTop = 28;
+    int32_t zoneH   = PAD_Y - 2 - zoneTop;
+
+    display.fillRect(0, zoneTop, display.width(), zoneH, TFT_BLACK);
+
+    display.setTextSize(1);
+
+    display.setFont(&fonts::DejaVu18);
+
+    display.setTextDatum(textdatum_t::middle_center);
+
+    display.setTextColor(TFT_WHITE);
+
+    display.drawString(text, display.width() / 2, zoneTop + zoneH / 2);
+
+    display.unloadFont();
+
+    _toastUntil = millis() + DISPLAY_TOAST_MS;
+}
+
+void DisplayController::updateToast()
+{
+    if (_toastUntil == 0 || static_cast<int32_t>(millis() - _toastUntil) < 0)
+    {
+        return;
+    }
+
+    _toastUntil = 0;
+
+    display.fillRect(0, 28, display.width(), PAD_Y - 2 - 28, TFT_BLACK);
+}
+
 void DisplayController::updatePeaks()
 {
     if (!ENABLE_VELOCITY_PEAK_HOLD)
