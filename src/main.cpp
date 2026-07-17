@@ -141,6 +141,8 @@ void setup()
 
     speaker.setWaveform(Settings::waveform());
 
+    speaker.setArp(Settings::arp());
+
     encoder.begin();
 
     menu.begin(&speaker, &displayCtrl);

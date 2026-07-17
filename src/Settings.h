@@ -18,6 +18,9 @@ void setWaveform(uint8_t waveform);
 uint8_t scale();
 void setScale(uint8_t scale);
 
+uint8_t arp();
+void setArp(uint8_t arp);
+
 int8_t octave();
 void setOctave(int8_t octave);
 } // namespace Settings

@@ -29,7 +29,9 @@ Pads, den Verbindungsstatus und den Batteriestand.
 - **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
   PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
   Menü und wechselt zwischen **Lautstärke**, **Wellenform**
-  (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Skala** (Dur, Moll,
+  (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Arpeggio**
+  (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
+  schnelle Notenfolge zerlegt), **Skala** (Dur, Moll,
   Pentatonik, Blues) und **Oktave** (±2), Drehen
   ändert den Wert; ohne Menü wirkt Drehen als Lautstärke-
   Schnellzugriff. Alle Werte landen im NVS-Flash und überleben

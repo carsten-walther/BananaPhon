@@ -38,4 +38,8 @@ public:
     // Wellenform zur Laufzeit (Waveform-Enum), z. B. aus dem Menü
     void setWaveform(uint8_t waveform);
     uint8_t waveform();
+
+    // Arpeggio-Modus (Index in ARP_STEP_MS; 0 = aus)
+    void setArp(uint8_t mode);
+    uint8_t arp();
 };

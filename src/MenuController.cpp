@@ -14,6 +14,7 @@ enum Item : uint8_t
 {
     ITEM_VOLUME = 0,
     ITEM_WAVEFORM,
+    ITEM_ARP,
     ITEM_SCALE,
     ITEM_OCTAVE,
 
@@ -22,6 +23,8 @@ enum Item : uint8_t
 
 // Ohne Umlaute — die geladene DejaVu-Schrift deckt ASCII sicher ab
 const char* waveformNames[WAVE_COUNT] = {"Triangle", "Rectangle", "Saw", "Sine", "8-Bit"};
+
+const char* arpNames[ARP_MODE_COUNT] = {"Off", "Slow", "Fast", "Turbo"};
 } // namespace
 
 void MenuController::begin(SpeakerController* speaker, DisplayController* display)
@@ -38,6 +41,10 @@ void MenuController::show()
     {
     case ITEM_WAVEFORM:
         snprintf(text, sizeof(text), "Waveform: %s", waveformNames[Settings::waveform()]);
+        break;
+
+    case ITEM_ARP:
+        snprintf(text, sizeof(text), "Arp: %s", arpNames[Settings::arp()]);
         break;
 
     case ITEM_SCALE:
@@ -133,6 +140,22 @@ void MenuController::handleRotation(int32_t detents)
         Settings::setWaveform(static_cast<uint8_t>(wf));
 
         _speaker->setWaveform(static_cast<uint8_t>(wf));
+
+        break;
+    }
+
+    case ITEM_ARP:
+    {
+        int32_t am = (Settings::arp() + detents) % ARP_MODE_COUNT;
+
+        if (am < 0)
+        {
+            am += ARP_MODE_COUNT;
+        }
+
+        Settings::setArp(static_cast<uint8_t>(am));
+
+        _speaker->setArp(static_cast<uint8_t>(am));
 
         break;
     }

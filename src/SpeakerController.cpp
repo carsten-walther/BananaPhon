@@ -32,6 +32,21 @@ float masterVolume = SPEAKER_MASTER_VOLUME;
 // Aktive Wellenform (Waveform-Enum); 8-Bit-Zugriff ist atomar
 uint8_t activeWaveform = WAVE_CHIP;
 
+// Arpeggio: Modus, Schrittlänge in Samples (0 = aus). Die Auswahl
+// der klingenden Stimme läuft komplett im Audio-Task; der Loop-Task
+// setzt nur arpStepSamples (32-Bit-Zugriff atomar).
+uint8_t arpMode         = 0;
+uint32_t arpStepSamples = 0;
+
+uint8_t arpIndex      = 0;
+uint32_t arpCountdown = 0;
+bool arpAny           = false;
+
+// De-Klick-Blende pro Stimme beim Arp-Umschalten (~3 ms Rampe)
+float arpGain[NUM_SENSORS] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+
+constexpr float ARP_FADE_PER_SAMPLE = 1.0f / 64.0f;
+
 // Sinus-Tabelle (1024 Einträge, in begin() gefüllt) — direkte
 // sinf()-Aufrufe pro Sample wären im Audio-Task zu teuer
 int16_t sineLut[1024];
@@ -99,8 +114,69 @@ void audioTask(void*)
         {
             float mix = 0.0f;
 
+            // Arpeggio: alle arpStepSamples zur nächsten gehaltenen
+            // Stimme weiterschalten (aufsteigend, zyklisch). arpAny
+            // merkt sich, ob überhaupt eine Taste gehalten wird —
+            // ohne gehaltene Tasten klingen Release-Fahnen normal aus.
+            bool arpOn = arpStepSamples > 0;
+
+            if (arpOn)
+            {
+                if (arpCountdown == 0)
+                {
+                    arpAny = false;
+
+                    for (uint8_t k = 1; k <= NUM_SENSORS; k++)
+                    {
+                        uint8_t cand = (arpIndex + k) % NUM_SENSORS;
+
+                        if (voices[cand].gate)
+                        {
+                            arpIndex = cand;
+                            arpAny   = true;
+
+                            break;
+                        }
+                    }
+
+                    arpCountdown = arpStepSamples;
+                }
+
+                arpCountdown--;
+            }
+
+            uint8_t i = 0;
+
             for (auto& v : voices)
             {
+                // Arp-Blende: aktive Stimme auf 1, alle anderen auf 0 —
+                // mit kurzer Rampe gegen Klicks. Ohne Arp (oder ohne
+                // gehaltene Tasten) blenden alle Stimmen auf 1 zurück.
+                float gainTarget = (!arpOn || !arpAny || i == arpIndex) ? 1.0f : 0.0f;
+
+                if (arpGain[i] < gainTarget)
+                {
+                    arpGain[i] += ARP_FADE_PER_SAMPLE;
+
+                    if (arpGain[i] > 1.0f)
+                    {
+                        arpGain[i] = 1.0f;
+                    }
+                }
+                else if (arpGain[i] > gainTarget)
+                {
+                    arpGain[i] -= ARP_FADE_PER_SAMPLE;
+
+                    if (arpGain[i] < 0.0f)
+                    {
+                        arpGain[i] = 0.0f;
+                    }
+                }
+
+                uint8_t gainIndex = i;
+
+                i++;
+
                 if (v.amp <= 0.0f && v.target <= 0.0f)
                 {
                     continue;
@@ -128,7 +204,7 @@ void audioTask(void*)
 
                 v.phase += v.step;
 
-                mix += oscSample(v.phase, activeWaveform) * v.amp;
+                mix += oscSample(v.phase, activeWaveform) * v.amp * arpGain[gainIndex];
             }
 
             // Kopffreiheit: durch die Stimmenzahl teilen, dann Master
@@ -314,4 +390,21 @@ void SpeakerController::setWaveform(uint8_t waveform)
 uint8_t SpeakerController::waveform()
 {
     return activeWaveform;
+}
+
+void SpeakerController::setArp(uint8_t mode)
+{
+    if (mode >= ARP_MODE_COUNT)
+    {
+        mode = 0;
+    }
+
+    arpMode = mode;
+
+    arpStepSamples = ARP_STEP_MS[mode] * SPEAKER_SAMPLE_RATE / 1000;
+}
+
+uint8_t SpeakerController::arp()
+{
+    return arpMode;
 }

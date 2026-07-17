@@ -163,6 +163,13 @@ constexpr uint32_t SPEAKER_SAMPLE_RATE = 22050;
 // des MAX98357A)
 constexpr float SPEAKER_MASTER_VOLUME = 0.6f;
 
+// Arpeggio: gehaltene Noten werden zyklisch als schnelle Folge
+// gespielt statt gleichzeitig (der klassische C64-Trick). Stufen:
+// Off / Slow / Fast / Turbo — Schrittdauer in ms (0 = aus).
+constexpr uint32_t ARP_STEP_MS[] = {0, 120, 60, 30};
+
+constexpr uint8_t ARP_MODE_COUNT = 4;
+
 // Hüllkurve pro Stimme: kurze Rampen verhindern Knackser bei
 // NoteOn/NoteOff
 constexpr uint32_t SPEAKER_ATTACK_MS  = 5;
