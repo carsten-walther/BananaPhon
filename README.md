@@ -23,14 +23,13 @@ Pads, den Verbindungsstatus und den Batteriestand.
   Anschlags erfasst
 - **BLE-MIDI**: erscheint als Bluetooth-MIDI-Gerät (macOS, iOS, Windows 10+)
 - **Standalone-Betrieb mit Lautsprecher**: ohne verbundenes
-  MIDI-Ziel spielt ein I2S-Verstärker (MAX98357A an GPIO 16/17/18)
-  die Noten direkt — polyphon mit einer Dreieck-Stimme pro Pad,
+  MIDI-Ziel spielt ein I2S-Verstärker (MAX98357A) die Noten direkt — polyphon mit einer Dreieck-Stimme pro Pad,
   Velocity steuert die Lautstärke; Lautsprecher-Icon in der
   Statusleiste zeigt den Modus
-- **Rotary-Encoder** (EC11/KY-040 an GPIO 21/44/43, per
-  PCNT-Hardware ausgewertet): im Standalone-Betrieb regelt Drehen
-  die Lautstärke, ein Druck zeigt den aktuellen Wert — Grundstein
-  für das geplante Settings-Menü
+- **Rotary-Encoder** (EC11/KY-040, per PCNT-Hardware in voller
+  Quadratur ausgewertet): im Standalone-Betrieb regelt Drehen die
+  Lautstärke (Anzeige als kurze Einblendung), ein Druck zeigt den
+  aktuellen Wert — Grundstein für das geplante Settings-Menü
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
   öffnet das Gerät ein Captive Portal (AP "BananaPhon",
   http://192.168.4.1, Zahnrad-Icon in der Statusleiste) — dort eingetragene Zugangsdaten überleben
@@ -44,14 +43,24 @@ Pads, den Verbindungsstatus und den Batteriestand.
   dem Loslassen hält ein Peak-Marker die letzte Höhe kurz und fällt
   dann animiert nach unten —, Pads im Klavier-Look (weiße Tasten, unten
   gerundet, mit Deko-Obertasten über den Fugen), Notennamen im
-  unteren Tasten-Bereich, Statuszeile (BLE / WLAN / RTP), Batterieanzeige mit
+  unteren Tasten-Bereich, Status-Icons mittig in der oberen Leiste
+  (Bluetooth, WLAN, Note für RTP, Zahnrad fürs Setup-Portal,
+  Lautsprecher für den Standalone-Betrieb), Batterieanzeige mit
   Ladestand bzw. USB-Erkennung
 
 ## Hardware
 
 - LilyGo T-Display S3 (Version **ohne** Touchscreen)
+- MAX98357A I2S-Verstärker + 3-W-Lautsprecher (4 Ω) für den
+  Standalone-Betrieb
+- KY-040/EC11 Rotary-Encoder
 - Optional: 1S-LiPo-Akku am JST-Anschluss
 - 7 Elektroden (Krokodilklemmen ans Gemüse der Wahl)
+
+| | | |
+|---|---|---|
+| ![T-Display S3](docs/LilyGo-T-Display-S3-0001.jpeg) | ![MAX98357A](docs/MAX98357A-I2S-Class-D-3W-Amplifier.jpeg) | ![KY-040](docs/KY-040-Rotary-Encoder.jpg) |
+| LilyGo T-Display S3 | MAX98357A I2S-Verstärker | KY-040 Rotary-Encoder |
 
 ### Pinbelegung
 
@@ -65,6 +74,18 @@ Pads, den Verbindungsstatus und den Batteriestand.
 | 12   | Touch-Sensor 6 | A4 (69) |
 | 13   | Touch-Sensor 7 | H4 (71) |
 | 4    | Batteriespannung (intern, 2:1-Teiler) | — |
+| 21   | I2S BCLK → MAX98357A | — |
+| 17   | I2S LRC → MAX98357A | — |
+| 16   | I2S DIN → MAX98357A | — |
+| 18   | Encoder A | — |
+| 44   | Encoder B | — |
+| 43   | Encoder SW (Taster) | — |
+| 14   | Board-Button: Rekalibrierung | — |
+
+Der MAX98357A braucht zusätzlich 5V und GND; der Gain-Pin kann offen
+bleiben (9 dB). Encoder-Taster gegen GND, Pull-ups sind intern gesetzt.
+GPIO 43/44 sind U0TXD/U0RXD — frei nutzbar, weil der serielle Monitor
+auf dem S3 über natives USB-CDC läuft.
 
 Mehr interne Touch-Pins gibt es auf diesem Board nicht — GPIO 5–9
 gehören dem Display, GPIO 14 dem zweiten Button (hier: Rekalibrierung).
@@ -131,6 +152,13 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
 - Touch-Empfindlichkeit (`TOUCH_ON_RATIO` / `TOUCH_OFF_RATIO`)
 - Baseline-Nachführung (`TOUCH_BASELINE_INTERVAL_MS` = 0 schaltet sie ab,
   `TOUCH_BASELINE_FILTER` bestimmt die Trägheit)
+- Lautsprecher (`ENABLE_SPEAKER`, I2S-Pins, `SPEAKER_SAMPLE_RATE`,
+  `SPEAKER_MASTER_VOLUME`, Hüllkurve `SPEAKER_ATTACK_MS` /
+  `SPEAKER_RELEASE_MS`)
+- Rotary-Encoder (`ENABLE_ENCODER`, Pins, `ENCODER_STEPS_PER_DETENT`,
+  `ENCODER_VOLUME_STEP`)
+- Display (`DISPLAY_ROTATION`, `DISPLAY_BRIGHNESS`, Einblenddauer
+  `DISPLAY_TOAST_MS`)
 
 **Hinweis zu USB-Host-MIDI:** Der USB-C-Port wird dann exklusiv vom
 USB-Host belegt — der serielle Monitor funktioniert nicht mehr, und es
@@ -144,6 +172,8 @@ include/Credentials.h       WLAN-Zugangsdaten (lokal, gitignoriert)
 src/main.cpp                Verdrahtung: Touch → MIDI + Display
 src/TouchSensor.*           Touch-Logik (ESP32-S3, Baseline + Hysterese)
 src/MidiController.*        MIDI-Transports (BLE, RTP, USB-Host)
+src/SpeakerController.*     Standalone-Synth über I2S (MAX98357A)
+src/EncoderController.*     Rotary-Encoder (PCNT-Quadraturzähler)
 src/DisplayController.*     Panel-Konfiguration und UI
 scripts/format.py           Format-Target und compiledb-Hook
 ```
@@ -156,6 +186,10 @@ pio run -t format    # Code formatieren (clang-format, .clang-format)
 pio check            # Statische Analyse (cppcheck)
 pio run -t compiledb # compile_commands.json für clangd erzeugen
 ```
+
+Das Projekt wird mit **C++17** gebaut (`build_flags` in der
+`platformio.ini`); die CI prüft Build, cppcheck und clang-format
+bei jedem Push.
 
 ### WLAN-Setup-Portal
 
