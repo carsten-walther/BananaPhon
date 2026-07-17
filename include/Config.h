@@ -159,9 +159,9 @@ constexpr uint16_t TOUCH_BASELINE_FILTER      = 16;
 constexpr bool ENABLE_SPEAKER = true;
 
 // I2S-Pins zum MAX98357A (BCLK/LRC/DIN); 5V und GND nicht vergessen
-constexpr uint8_t PIN_I2S_BCLK  = 16;
+constexpr uint8_t PIN_I2S_BCLK  = 21;
 constexpr uint8_t PIN_I2S_LRCLK = 17;
-constexpr uint8_t PIN_I2S_DOUT  = 18;
+constexpr uint8_t PIN_I2S_DOUT  = 16;
 
 constexpr uint32_t SPEAKER_SAMPLE_RATE = 22050;
 
@@ -208,9 +208,9 @@ constexpr uint32_t DISPLAY_TOAST_MS = 1500;
 // Monitor auf dem S3 über natives USB-CDC läuft, nicht über UART0.
 constexpr bool ENABLE_ENCODER = true;
 
-constexpr uint8_t PIN_ENCODER_A  = 43;
-constexpr uint8_t PIN_ENCODER_B  = 44;
-constexpr uint8_t PIN_ENCODER_SW = 21;
+constexpr uint8_t PIN_ENCODER_A  = 44;
+constexpr uint8_t PIN_ENCODER_B  = 18;
+constexpr uint8_t PIN_ENCODER_SW = 43;
 
 // Zählimpulse pro Raste (EC11: 4 bei voller Quadratur-Auswertung)
 constexpr int32_t ENCODER_STEPS_PER_DETENT = 4;
