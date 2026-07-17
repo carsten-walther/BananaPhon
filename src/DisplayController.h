@@ -28,8 +28,12 @@ public:
     void updatePeaks();
 
     // Kurzzeitige Einblendung im Freiraum zwischen Statusleiste und
-    // Tasten (verschwindet nach DISPLAY_TOAST_MS von selbst)
-    void showToast(const char* text);
+    // Tasten; verschwindet nach `durationMs` von selbst
+    void showToast(const char* text, uint32_t durationMs = DISPLAY_TOAST_MS);
+
+    // Oktav-Shift für die Tastenbeschriftung (Anzeige folgt den
+    // tatsächlich gespielten Noten); danach showPads() aufrufen
+    void setOctave(int8_t octave);
 
     // Räumt eine abgelaufene Einblendung weg — aus loop() aufrufen
     void updateToast();
@@ -67,4 +71,6 @@ private:
     uint32_t _lastPeakStep = 0;
 
     uint32_t _toastUntil = 0;
+
+    int8_t _octave = 0;
 };

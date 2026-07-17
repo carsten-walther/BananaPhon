@@ -29,6 +29,13 @@ float releasePerSample = 0.0f;
 // Laufzeit-Lautstärke; 32-Bit-Float-Zugriff ist auf dem Xtensa atomar
 float masterVolume = SPEAKER_MASTER_VOLUME;
 
+// Aktive Wellenform (Waveform-Enum); 8-Bit-Zugriff ist atomar
+uint8_t activeWaveform = WAVE_TRIANGLE;
+
+// Sinus-Tabelle (1024 Einträge, in begin() gefüllt) — direkte
+// sinf()-Aufrufe pro Sample wären im Audio-Task zu teuer
+int16_t sineLut[1024];
+
 // Frames pro Renderblock (Stereo, 16 Bit) — bei 22,05 kHz sind
 // 128 Frames ~5,8 ms Latenz pro Block
 constexpr int FRAMES = 128;
@@ -50,6 +57,27 @@ int16_t triangle(uint32_t phase)
         x < 32768 ? static_cast<int32_t>(x) * 2 - 32768 : 98303 - static_cast<int32_t>(x) * 2;
 
     return static_cast<int16_t>(s);
+}
+
+// Ein Sample der aktiven Wellenform. Rechteck etwas leiser (28000
+// statt Vollausschlag), weil es subjektiv deutlich lauter wirkt.
+int16_t oscSample(uint32_t phase, uint8_t wf)
+{
+    switch (wf)
+    {
+    case WAVE_SQUARE:
+        return phase < 0x80000000u ? 28000 : -28000;
+
+    case WAVE_SAW:
+        return static_cast<int16_t>(static_cast<int32_t>(phase >> 16) - 32768);
+
+    case WAVE_SINE:
+        return sineLut[phase >> 22];
+
+    case WAVE_TRIANGLE:
+    default:
+        return triangle(phase);
+    }
 }
 
 // Rendert und schreibt Audio-Blöcke — läuft als eigener Task auf
@@ -93,7 +121,7 @@ void audioTask(void*)
 
                 v.phase += v.step;
 
-                mix += triangle(v.phase) * v.amp;
+                mix += oscSample(v.phase, activeWaveform) * v.amp;
             }
 
             // Kopffreiheit: durch die Stimmenzahl teilen, dann Master
@@ -133,6 +161,11 @@ void SpeakerController::begin()
 
     attackPerSample  = 1.0f / (SPEAKER_ATTACK_MS * 0.001f * SPEAKER_SAMPLE_RATE);
     releasePerSample = 1.0f / (SPEAKER_RELEASE_MS * 0.001f * SPEAKER_SAMPLE_RATE);
+
+    for (int i = 0; i < 1024; i++)
+    {
+        sineLut[i] = static_cast<int16_t>(sinf(i * 6.2831853f / 1024.0f) * 32000.0f);
+    }
 
     i2s_config_t cfg = {};
 
@@ -251,4 +284,19 @@ void SpeakerController::setVolume(float volume)
 float SpeakerController::volume()
 {
     return masterVolume;
+}
+
+void SpeakerController::setWaveform(uint8_t waveform)
+{
+    if (waveform >= WAVE_COUNT)
+    {
+        waveform = WAVE_TRIANGLE;
+    }
+
+    activeWaveform = waveform;
+}
+
+uint8_t SpeakerController::waveform()
+{
+    return activeWaveform;
 }

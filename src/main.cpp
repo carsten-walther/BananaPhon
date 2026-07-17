@@ -4,7 +4,9 @@
 
 #include "DisplayController.h"
 #include "EncoderController.h"
+#include "MenuController.h"
 #include "MidiController.h"
+#include "Settings.h"
 #include "SpeakerController.h"
 #include "TouchSensor.h"
 
@@ -16,6 +18,31 @@ MidiController midi;
 SpeakerController speaker;
 
 EncoderController encoder;
+
+MenuController menu;
+
+// Tatsächlich gespielte Note pro Pad (inkl. Oktav-Shift) — das
+// NoteOff muss exakt dieselbe Note treffen, auch wenn die Oktave
+// zwischen NoteOn und NoteOff umgestellt wurde.
+uint8_t playedNote[NUM_SENSORS] = {0};
+
+// MIDI-Note mit Oktav-Shift, auf den gültigen Bereich begrenzt
+static uint8_t shiftedNote(uint8_t i)
+{
+    int32_t note = midiNotes[i] + Settings::octave() * 12;
+
+    if (note < 0)
+    {
+        note = 0;
+    }
+
+    if (note > 127)
+    {
+        note = 127;
+    }
+
+    return static_cast<uint8_t>(note);
+}
 
 DisplayController displayCtrl;
 
@@ -51,11 +78,11 @@ static void recalibrateSensors()
         {
             if (noteViaMidi[i])
             {
-                midi.noteOff(sensors[i].note());
+                midi.noteOff(playedNote[i]);
             }
             else
             {
-                speaker.noteOff(sensors[i].note());
+                speaker.noteOff(playedNote[i]);
             }
 
             displayCtrl.drawPad(i, false);
@@ -87,7 +114,11 @@ void setup()
 
     pinMode(PIN_BUTTON_RECALIBRATE, INPUT_PULLUP);
 
+    Settings::begin();
+
     displayCtrl.begin();
+
+    displayCtrl.setOctave(Settings::octave());
 
     displayCtrl.showCalibrating();
 
@@ -103,7 +134,13 @@ void setup()
 
     speaker.begin();
 
+    speaker.setVolume(Settings::volume());
+
+    speaker.setWaveform(Settings::waveform());
+
     encoder.begin();
+
+    menu.begin(&speaker, &displayCtrl);
 
     displayCtrl.showBattery(readBatteryMilliVolts());
 }
@@ -136,13 +173,15 @@ void loop()
         {
             noteViaMidi[i] = !ENABLE_SPEAKER || midiConnected();
 
+            playedNote[i] = shiftedNote(i);
+
             if (noteViaMidi[i])
             {
-                midi.noteOn(sensors[i].note(), sensors[i].velocity());
+                midi.noteOn(playedNote[i], sensors[i].velocity());
             }
             else
             {
-                speaker.noteOn(sensors[i].note(), sensors[i].velocity());
+                speaker.noteOn(playedNote[i], sensors[i].velocity());
             }
 
             displayCtrl.drawPad(i, true, sensors[i].velocity());
@@ -158,11 +197,11 @@ void loop()
         {
             if (noteViaMidi[i])
             {
-                midi.noteOff(sensors[i].note());
+                midi.noteOff(playedNote[i]);
             }
             else
             {
-                speaker.noteOff(sensors[i].note());
+                speaker.noteOff(playedNote[i]);
             }
 
             displayCtrl.drawPad(i, false);
@@ -190,28 +229,24 @@ void loop()
 
     displayCtrl.updateToast();
 
-    // Encoder: im Standalone-Betrieb regelt Drehen die Lautstärke,
-    // ein Druck zeigt den aktuellen Wert an
+    // Encoder: Klick öffnet das Settings-Menü bzw. wechselt den
+    // Parameter, Drehen ändert den Wert (geschlossen: Lautstärke-
+    // Schnellzugriff). Menü-Timeout und NVS-Speichern in update().
     encoder.update();
+
+    if (encoder.clicked())
+    {
+        menu.handleClick();
+    }
 
     int32_t detents = encoder.readDetents();
 
-    bool standalone = ENABLE_SPEAKER && !midiConnected();
-
-    if (standalone && (detents != 0 || encoder.clicked()))
+    if (detents != 0)
     {
-        if (detents != 0)
-        {
-            speaker.setVolume(speaker.volume() + detents * ENCODER_VOLUME_STEP);
-        }
-
-        char toast[16];
-
-        snprintf(toast, sizeof(toast), "Volume %d%%",
-                 static_cast<int>(speaker.volume() * 100.0f + 0.5f));
-
-        displayCtrl.showToast(toast);
+        menu.handleRotation(detents);
     }
+
+    menu.update();
 
     // Statuszeile höchstens alle 500 ms prüfen
     if (millis() - lastStatusUpdate > 500)

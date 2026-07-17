@@ -26,10 +26,13 @@ Pads, den Verbindungsstatus und den Batteriestand.
   MIDI-Ziel spielt ein I2S-Verstärker (MAX98357A) die Noten direkt — polyphon mit einer Dreieck-Stimme pro Pad,
   Velocity steuert die Lautstärke; Lautsprecher-Icon in der
   Statusleiste zeigt den Modus
-- **Rotary-Encoder** (EC11/KY-040, per PCNT-Hardware in voller
-  Quadratur ausgewertet): im Standalone-Betrieb regelt Drehen die
-  Lautstärke (Anzeige als kurze Einblendung), ein Druck zeigt den
-  aktuellen Wert — Grundstein für das geplante Settings-Menü
+- **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
+  PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
+  Menü und wechselt zwischen **Lautstärke**, **Wellenform**
+  (Dreieck/Rechteck/Sägezahn/Sinus) und **Oktave** (±2), Drehen
+  ändert den Wert; ohne Menü wirkt Drehen als Lautstärke-
+  Schnellzugriff. Alle Werte landen im NVS-Flash und überleben
+  Neustarts — konfigurieren statt kompilieren
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
   öffnet das Gerät ein Captive Portal (AP "BananaPhon",
   http://192.168.4.1, Zahnrad-Icon in der Statusleiste) — dort eingetragene Zugangsdaten überleben
@@ -157,6 +160,9 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
   `SPEAKER_RELEASE_MS`)
 - Rotary-Encoder (`ENABLE_ENCODER`, Pins, `ENCODER_STEPS_PER_DETENT`,
   `ENCODER_VOLUME_STEP`)
+- Settings-Menü (`MENU_TIMEOUT_MS`, Oktavbereich `OCTAVE_RANGE`);
+  die Defaults für Lautstärke/Wellenform gelten bis zur ersten
+  Änderung im Menü, danach zählen die im NVS gespeicherten Werte
 - Display (`DISPLAY_ROTATION`, `DISPLAY_BRIGHNESS`, Einblenddauer
   `DISPLAY_TOAST_MS`)
 
@@ -174,6 +180,8 @@ src/TouchSensor.*           Touch-Logik (ESP32-S3, Baseline + Hysterese)
 src/MidiController.*        MIDI-Transports (BLE, RTP, USB-Host)
 src/SpeakerController.*     Standalone-Synth über I2S (MAX98357A)
 src/EncoderController.*     Rotary-Encoder (PCNT-Quadraturzähler)
+src/MenuController.*        Settings-Menü (Encoder-Bedienung)
+src/Settings.*              persistente Einstellungen (NVS)
 src/DisplayController.*     Panel-Konfiguration und UI
 scripts/format.py           Format-Target und compiledb-Hook
 ```

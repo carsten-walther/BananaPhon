@@ -199,6 +199,19 @@ constexpr uint8_t DISPLAY_BRIGHNESS = 255;
 constexpr uint32_t DISPLAY_TOAST_MS = 1500;
 
 // ------------------------------------------------
+// Settings-Menü
+// ------------------------------------------------
+
+// Encoder-Klick öffnet das Menü: Drehen ändert den Wert, Klicken
+// wechselt zum nächsten Parameter (Lautstärke, Wellenform, Oktave).
+// Ohne Eingabe schließt es sich nach dem Timeout; geänderte Werte
+// landen im NVS-Flash und überleben Neustarts.
+constexpr uint32_t MENU_TIMEOUT_MS = 4000;
+
+// Oktav-Shift-Bereich (± in Oktaven)
+constexpr int8_t OCTAVE_RANGE = 2;
+
+// ------------------------------------------------
 // Rotary-Encoder
 // ------------------------------------------------
 
