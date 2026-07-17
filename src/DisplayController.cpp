@@ -622,7 +622,8 @@ void DisplayController::updatePeaks()
         }
 
         // Im Bereich der Obertasten: die Deko wieder nach vorne holen
-        if (oldPos >= PAD_INNER - BLACK_KEY_HEIGHT)
+        // (nur bei Melodie-Instrumenten — im Drum-Modus gibt es keine)
+        if (_instrument != INST_DRUMS && oldPos >= PAD_INNER - BLACK_KEY_HEIGHT)
         {
             drawBlackKeysAround(i);
         }

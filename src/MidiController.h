@@ -11,12 +11,9 @@ public:
 
     void update();
 
-
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel = MIDI_CHANNEL);
 
-
     void noteOff(uint8_t note, uint8_t channel = MIDI_CHANNEL);
-
 
     // Verbindungsstatus (für die Display-Anzeige)
 

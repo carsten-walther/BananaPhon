@@ -364,13 +364,13 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
 
             const DrumSpec& spec = drumSpecs[d];
 
-            v.note       = note;
-            v.gate       = false; // One-Shot: kein Gate, Arp bleibt inaktiv
-            v.oneShot    = true;
-            v.phase      = 0;
-            v.step       = spec.freq > 0.0f
-                               ? static_cast<uint32_t>(spec.freq / SPEAKER_SAMPLE_RATE * 4294967296.0f)
-                               : 0;
+            v.note    = note;
+            v.gate    = false; // One-Shot: kein Gate, Arp bleibt inaktiv
+            v.oneShot = true;
+            v.phase   = 0;
+            v.step    = spec.freq > 0.0f
+                            ? static_cast<uint32_t>(spec.freq / SPEAKER_SAMPLE_RATE * 4294967296.0f)
+                            : 0;
             v.pitchDecay = spec.pitchDecay;
             v.ampDecay   = spec.ampDecay;
             v.toneMix    = spec.toneMix;
