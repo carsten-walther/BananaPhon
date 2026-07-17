@@ -40,6 +40,10 @@ void MenuController::show()
         snprintf(text, sizeof(text), "Waveform: %s", waveformNames[Settings::waveform()]);
         break;
 
+    case ITEM_SCALE:
+        snprintf(text, sizeof(text), "Scale: %s", scaleNames[Settings::scale()]);
+        break;
+
     case ITEM_OCTAVE:
         snprintf(text, sizeof(text), "Octave: %+d", Settings::octave());
         break;
@@ -129,6 +133,25 @@ void MenuController::handleRotation(int32_t detents)
         Settings::setWaveform(static_cast<uint8_t>(wf));
 
         _speaker->setWaveform(static_cast<uint8_t>(wf));
+
+        break;
+    }
+
+    case ITEM_SCALE:
+    {
+        int32_t sc = (Settings::scale() + detents) % SCALE_COUNT;
+
+        if (sc < 0)
+        {
+            sc += SCALE_COUNT;
+        }
+
+        Settings::setScale(static_cast<uint8_t>(sc));
+
+        // Tastenbeschriftung folgt der neuen Skala
+        _display->setScale(static_cast<uint8_t>(sc));
+
+        _display->showPads();
 
         break;
     }

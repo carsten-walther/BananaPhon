@@ -31,7 +31,7 @@ constexpr uint8_t scaleIntervals[SCALE_COUNT][NUM_SENSORS] = {
 };
 
 // Anzeigenamen (ASCII, siehe Menü)
-constexpr const char* scaleNames[SCALE_COUNT] = {"Dur", "Moll", "Penta", "Blues"};
+constexpr const char* scaleNames[SCALE_COUNT] = {"Major", "Minor", "Penta", "Blues"};
 
 // MIDI-Note eines Pads in der gewählten Skala (ohne Oktav-Shift)
 inline uint8_t scaleNote(uint8_t scale, uint8_t index)
