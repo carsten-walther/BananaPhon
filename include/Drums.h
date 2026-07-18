@@ -82,19 +82,38 @@ struct DrumSpec
                       // hat auch nach einem Tiefpass vollen Bassanteil —
                       // HiHats und Clap brauchen die Gegenrichtung,
                       // sonst rauschen sie statt zu zischen.
+    uint8_t bursts;   // zusätzliche Anschläge nach dem ersten (0 = keiner).
+                      // Ein Clap ist kein einzelner Schlag, sondern eine
+                      // Handvoll dicht gestaffelter — erst danach der Tail.
+    float burstMs;    // Abstand der Bursts; das schnelle Ausklingen
+                      // dazwischen wird daraus abgeleitet
+    int8_t chokes;    // Index einer Drum, die dieser Schlag abwürgt
+                      // (-1 = keine): die geschlossene HiHat beendet
+                      // die offene, wie auf einem echten Kit
     float gain;       // Lautstärke-Ausgleich der Drum gegenüber Melodie
 };
 
+// Ausklingen einer abgewürgten Drum (~5 ms). Hart abschalten würde
+// knacken, deshalb ein kurzer exponentieller Fade.
+constexpr float DRUM_CHOKE_DECAY = 0.93926f;
+
+// Anschlagstärke öffnet den Rausch-Tiefpass: leise Schläge klingen
+// dumpfer, harte heller — so verhält sich ein echtes Fell. Der Wert
+// ist der Filteranteil bei Velocity 0 (1.0 = kein Einfluss). Bei den
+// hochpassgefilterten Drums bleibt der Filter fest, dort wäre die
+// Richtung „heller" nicht eindeutig.
+constexpr float DRUM_VEL_TONE_MIN = 0.6f;
+
 // clang-format off
 constexpr DrumSpec drumSpecs[NUM_SENSORS] = {
-    // freq  floor   pitchDecay ampDecay  tone   noise  lpf    hp     gain
-    {170.0f,  50.0f, 0.99889f, 0.99902f, 1.00f, 0.00f, 1.00f, false, 1.7f}, // Kick:      170->50 Hz in 50 ms, ~320 ms
-    {190.0f, 180.0f, 0.99940f, 0.99776f, 0.45f, 0.90f, 0.30f, false, 1.4f}, // Snare:     kurzer Snap, dann fester Ton + dunkles Rauschen
-    {  0.0f,   0.0f, 1.00000f, 0.99553f, 0.00f, 1.00f, 0.60f, true,  1.5f}, // HiHat zu:  Hochpass ~3,2 kHz, ~70 ms
-    {  0.0f,   0.0f, 1.00000f, 0.99911f, 0.00f, 0.80f, 0.55f, true,  1.5f}, // HiHat offen: Hochpass ~2,8 kHz, ~350 ms
-    {105.0f,  80.0f, 0.99979f, 0.99875f, 1.00f, 0.06f, 0.25f, false, 1.5f}, // Tom tief:  105->80 Hz, ~250 ms
-    {160.0f, 120.0f, 0.99979f, 0.99875f, 1.00f, 0.06f, 0.25f, false, 1.5f}, // Tom hoch:  160->120 Hz, ~250 ms
-    {  0.0f,   0.0f, 1.00000f, 0.99804f, 0.00f, 0.95f, 0.30f, true,  1.5f}, // Clap:      Hochpass ~1,25 kHz, mittiges Rauschen
+    // freq  floor   pitchDecay ampDecay  tone   noise  lpf    hp     brst  brstMs choke gain
+    {170.0f,  50.0f, 0.99889f, 0.99902f, 1.00f, 0.00f, 1.00f, false, 0,     0.0f, -1,  1.7f}, // Kick:        170->50 Hz in 50 ms, ~320 ms
+    {190.0f, 180.0f, 0.99940f, 0.99776f, 0.45f, 0.90f, 0.30f, false, 0,     0.0f, -1,  1.4f}, // Snare:       kurzer Snap, dann fester Ton + dunkles Rauschen
+    {  0.0f,   0.0f, 1.00000f, 0.99553f, 0.00f, 1.00f, 0.60f, true,  0,     0.0f,  3,  1.5f}, // HiHat zu:    Hochpass ~3,2 kHz, ~70 ms, wuergt die offene ab
+    {  0.0f,   0.0f, 1.00000f, 0.99911f, 0.00f, 0.80f, 0.55f, true,  0,     0.0f, -1,  1.5f}, // HiHat offen: Hochpass ~2,8 kHz, ~350 ms
+    {105.0f,  80.0f, 0.99979f, 0.99875f, 1.00f, 0.06f, 0.25f, false, 0,     0.0f, -1,  1.5f}, // Tom tief:    105->80 Hz, ~250 ms
+    {160.0f, 120.0f, 0.99979f, 0.99875f, 1.00f, 0.06f, 0.25f, false, 0,     0.0f, -1,  1.5f}, // Tom hoch:    160->120 Hz, ~250 ms
+    {  0.0f,   0.0f, 1.00000f, 0.99804f, 0.00f, 0.95f, 0.30f, true,  2,    10.0f, -1,  1.5f}, // Clap:        3 Anschlaege im 10-ms-Raster, dann Tail
 };
 // clang-format on
 

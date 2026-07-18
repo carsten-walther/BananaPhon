@@ -35,6 +35,15 @@ struct Voice
     float gain         = 1.0f;  // Lautstärke-Ausgleich der Drum
     float noiseState   = 0.0f;  // Filterzustand (ein Pol)
 
+    // Mehrfach-Anschlag (Clap): so lange burstsLeft > 0 ist, wird die
+    // Stimme alle burstSamples neu angeschlagen und klingt dazwischen
+    // mit burstDecay ab; danach übernimmt der normale ampDecay-Tail.
+    uint8_t burstsLeft      = 0;
+    uint32_t burstSamples   = 0;
+    uint32_t burstCountdown = 0;
+    float burstDecay        = 1.0f;
+    float burstAmp          = 0.0f;
+
     // FM-E-Piano: Modulator-Phase und fallender Modulationsindex
     bool fm           = false;
     uint32_t modPhase = 0;
@@ -231,8 +240,28 @@ void audioTask(void*)
 
                 if (v.oneShot)
                 {
-                    // Drum: feste Ausklinghüllkurve + fallende Tonhöhe
-                    v.amp *= v.ampDecay;
+                    // Mehrfach-Anschlag (Clap): vor dem Ausklingen neu
+                    // anschlagen, jeder Burst etwas leiser als der davor
+                    if (v.burstsLeft > 0)
+                    {
+                        if (v.burstCountdown == 0)
+                        {
+                            v.burstAmp *= 0.8f;
+                            v.amp            = v.burstAmp;
+                            v.burstCountdown = v.burstSamples;
+
+                            v.burstsLeft--;
+                        }
+                        else
+                        {
+                            v.burstCountdown--;
+                        }
+                    }
+
+                    // Drum: feste Ausklinghüllkurve + fallende Tonhöhe.
+                    // Während der Bursts klingt es schnell ab, danach
+                    // übernimmt der eigentliche Tail.
+                    v.amp *= v.burstsLeft > 0 ? v.burstDecay : v.ampDecay;
 
                     if (v.amp < 0.001f)
                     {
@@ -473,26 +502,57 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
 
             const DrumSpec& spec = drumSpecs[d];
 
-            v.note       = note;
-            v.gate       = false; // One-Shot: kein Gate, Arp bleibt inaktiv
-            v.oneShot    = true;
-            v.fm         = false;
-            v.phase      = 0;
+            v.note    = note;
+            v.gate    = false; // One-Shot: kein Gate, Arp bleibt inaktiv
+            v.oneShot = true;
+            v.fm      = false;
+            // Choke: dieser Schlag beendet eine andere Drum (geschlossene
+            // HiHat würgt die offene ab, wie auf einem echten Kit) —
+            // kurzer Fade statt hartem Abschalten, sonst knackt es
+            if (spec.chokes >= 0 && spec.chokes < static_cast<int8_t>(NUM_SENSORS))
+            {
+                Voice& choked = voices[spec.chokes];
+
+                choked.ampDecay   = DRUM_CHOKE_DECAY;
+                choked.burstsLeft = 0;
+            }
+
+            // Sinus am Maximum starten: der Sprung von 0 auf Vollaus-
+            // schlag IST der Anschlagsklick (Beater auf dem Fell). Bei
+            // reinen Rausch-Drums bleibt die Phase egal.
+            v.phase      = spec.toneMix > 0.0f ? 0x40000000u : 0;
             v.step       = spec.freq > 0.0f ? stepForFreq(spec.freq) : 0;
             v.stepFloor  = spec.pitchFloor > 0.0f ? stepForFreq(spec.pitchFloor) : 0;
             v.pitchDecay = spec.pitchDecay;
             v.ampDecay   = spec.ampDecay;
             v.toneMix    = spec.toneMix;
             v.noiseMix   = spec.noiseMix;
-            v.noiseLpf   = spec.noiseLpf;
             v.noiseHp    = spec.noiseHp;
             v.gain       = spec.gain;
             v.noiseState = 0.0f;
 
+            // Härter angeschlagene Felle klingen heller: die Schlagstärke
+            // öffnet den Rausch-Tiefpass. Beim Hochpass (HiHats, Clap)
+            // wäre die Richtung nicht eindeutig — der bleibt fest.
+            v.noiseLpf = spec.noiseHp
+                             ? spec.noiseLpf
+                             : spec.noiseLpf * (DRUM_VEL_TONE_MIN +
+                                                (1.0f - DRUM_VEL_TONE_MIN) * velocity / 127.0f);
+
+            // Mehrfach-Anschlag: das Ausklingen zwischen den Bursts wird
+            // aus ihrem Abstand abgeleitet (auf 10 % je Intervall)
+            v.burstsLeft     = spec.bursts;
+            v.burstSamples   = static_cast<uint32_t>(spec.burstMs * 0.001f * SPEAKER_SAMPLE_RATE);
+            v.burstCountdown = v.burstSamples;
+            v.burstDecay     = spec.bursts > 0 && v.burstSamples > 0
+                                   ? expf(logf(0.1f) / static_cast<float>(v.burstSamples))
+                                   : 1.0f;
+
             // Schlagstärke direkt setzen — der harte Einsatz gehört
-            // zum Drum-Transienten (Sinus startet bei Phase 0)
-            v.amp    = velocity / 127.0f;
-            v.target = v.amp;
+            // zum Drum-Transienten
+            v.amp      = velocity / 127.0f;
+            v.target   = v.amp;
+            v.burstAmp = v.amp;
 
             return;
         }

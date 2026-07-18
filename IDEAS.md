@@ -19,8 +19,10 @@ wo das Gerät herkommt.
   Snare/HiHat" ist als vollständiger **Drumkit-Modus** gelandet: sieben
   Pads als Kick, Snare, HiHats (zu/offen), zwei Toms und Clap,
   MIDI-seitig als GM-Percussion auf Kanal 10, am Lautsprecher als
-  808-Stil-Synthese (Sinus mit Tonhöhen-Hüllkurve + LFSR-Rauschen mit
-  Tiefpass, One-Shots mit Velocity). Rezepte in `include/Drums.h`.
+  808-Stil-Synthese (Sinus mit Tonhöhen-Hüllkurve auf einen Sockel +
+  LFSR-Rauschen mit Tief- bzw. Hochpass, One-Shots mit Velocity).
+  Dazu Clap-Mehrfachanschlag, HiHat-Choke und Velocity auf die
+  Helligkeit. Rezepte in `include/Drums.h`.
 - **Längeres Ausklingen** — mit dem **FM-E-Piano** (2-Operator-FM,
   DX7/Rhodes-Stil) gibt es einen Klang, der bei gehaltener Taste über
   ~2 s weich ausklingt statt nach 40 ms Release abzureißen.

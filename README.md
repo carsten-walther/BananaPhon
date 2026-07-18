@@ -36,8 +36,11 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   Tonhöhen-Hüllkurve auf einen Sockel (die Kick fällt von 170 auf
   50 Hz und *bleibt* dort, statt in den Subbass wegzulaufen) plus
   LFSR-Rauschen, tiefpassgefiltert für Snare und Toms,
-  hochpassgefiltert für HiHats und Clap; One-Shots mit Schlagstärke
-  aus der Anschlagsdynamik. Kit-Rezepte in
+  hochpassgefiltert für HiHats und Clap. Dazu die Details, die ein Kit
+  glaubwürdig machen: der Clap besteht aus drei gestaffelten Anschlägen
+  im 10-ms-Raster statt einem, die geschlossene HiHat würgt die offene
+  ab wie auf einem echten Kit, und die Anschlagstärke steuert nicht nur
+  die Lautstärke, sondern auch die Helligkeit der Felle. Kit-Rezepte in
   [`include/Drums.h`](include/Drums.h)
 - **Standalone-Betrieb mit Lautsprecher**: ohne verbundenes
   MIDI-Ziel spielt ein I2S-Verstärker (MAX98357A) die Noten direkt —
@@ -209,8 +212,11 @@ Instrumentspezifisches liegt in [`include/Drums.h`](include/Drums.h):
   und die Synthese-Rezepte (`drumSpecs`) — je Drum Startfrequenz und
   Sockel des Tonhöhen-Sweeps (`freq` / `pitchFloor`), Tonhöhen- und
   Amplituden-Abfall, Ton-/Rausch-Mischung, Rauschfilter
-  (`noiseLpf` als Koeffizient, `noiseHp` schaltet auf Hochpass) und
-  Pegel-Ausgleich
+  (`noiseLpf` als Koeffizient, `noiseHp` schaltet auf Hochpass),
+  Mehrfach-Anschlag (`bursts` / `burstMs`), Choke-Ziel (`chokes`,
+  -1 = keins) und Pegel-Ausgleich. Dazu `DRUM_CHOKE_DECAY`
+  (Ausklingen einer abgewürgten Drum) und `DRUM_VEL_TONE_MIN`
+  (wie stark die Anschlagstärke die Helligkeit öffnet)
 - FM-E-Piano: Modulationsverhältnis (`PIANO_MOD_RATIO`), Anschlagsglanz
   (`PIANO_INDEX_START` / `_FLOOR` / `_DECAY`) sowie Ausklingen und
   Release (`PIANO_DECAY`, `PIANO_RELEASE`)
