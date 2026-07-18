@@ -32,6 +32,11 @@ struct Voice
     float noiseLpf   = 1.0f; // Tiefpass-Koeffizient fürs Rauschen
     float gain       = 1.0f; // Lautstärke-Ausgleich der Drum
     float noiseState = 0.0f; // Filterzustand (ein Pol)
+
+    // FM-E-Piano: Modulator-Phase und fallender Modulationsindex
+    bool fm           = false;
+    uint32_t modPhase = 0;
+    float fmIndex     = 0.0f;
 };
 
 Voice voices[NUM_SENSORS];
@@ -249,6 +254,39 @@ void audioTask(void*)
                     continue;
                 }
 
+                if (v.fm)
+                {
+                    // FM-E-Piano: exponentielles Ausklingen — lang bei
+                    // gehaltener Taste, schneller nach dem Loslassen
+                    v.amp *= v.gate ? PIANO_DECAY : PIANO_RELEASE;
+
+                    if (v.amp < 0.001f)
+                    {
+                        v.amp    = 0.0f;
+                        v.target = 0.0f;
+
+                        continue;
+                    }
+
+                    // Anschlags-Glanz: Modulationsindex fällt auf den Sockel
+                    v.fmIndex =
+                        PIANO_INDEX_FLOOR + (v.fmIndex - PIANO_INDEX_FLOOR) * PIANO_INDEX_DECAY;
+
+                    v.phase += v.step;
+                    v.modPhase += v.step * PIANO_MOD_RATIO;
+
+                    // Phasenmodulation: der Modulator verschiebt den
+                    // Ablesepunkt in der Sinustabelle des Trägers
+                    int32_t offset =
+                        static_cast<int32_t>(sineLut[v.modPhase >> 22] * v.fmIndex) / 32000;
+
+                    uint32_t index = ((v.phase >> 22) + offset) & 1023u;
+
+                    mix += sineLut[index] * v.amp * arpGain[gainIndex];
+
+                    continue;
+                }
+
                 // Lineare Hüllkurve Richtung Zielamplitude
                 if (v.amp < v.target)
                 {
@@ -356,6 +394,29 @@ void SpeakerController::begin()
     Serial.println("Lautsprecher bereit (I2S)");
 }
 
+// Startet eine Melodie-Stimme (Chip oder FM-Piano) auf `v`
+static void startMelodyVoice(Voice& v, uint8_t note, uint8_t velocity)
+{
+    v.oneShot = false;
+
+    v.note   = note;
+    v.step   = stepForNote(note);
+    v.phase  = 0;
+    v.gate   = true;
+    v.target = velocity / 127.0f;
+
+    v.fm = activeInstrument == INST_PIANO;
+
+    if (v.fm)
+    {
+        // Perkussiver Anschlag: Amplitude sofort setzen (Sinus startet
+        // bei Phase 0, daher kein Klick), Anschlags-Glanz aufziehen
+        v.amp      = v.target;
+        v.modPhase = 0;
+        v.fmIndex  = PIANO_INDEX_START;
+    }
+}
+
 void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
 {
     if (activeInstrument == INST_DRUMS)
@@ -376,6 +437,7 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
             v.note       = note;
             v.gate       = false; // One-Shot: kein Gate, Arp bleibt inaktiv
             v.oneShot    = true;
+            v.fm         = false;
             v.phase      = 0;
             v.step       = spec.freq > 0.0f
                                ? static_cast<uint32_t>(spec.freq / SPEAKER_SAMPLE_RATE * 4294967296.0f)
@@ -407,6 +469,12 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
         {
             v.target = velocity / 127.0f;
 
+            if (v.fm)
+            {
+                v.amp     = v.target;
+                v.fmIndex = PIANO_INDEX_START;
+            }
+
             return;
         }
     }
@@ -417,13 +485,7 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
         if (!v.gate && v.amp <= 0.0f)
         // cppcheck-suppress useStlAlgorithm
         {
-            v.oneShot = false;
-
-            v.note   = note;
-            v.step   = stepForNote(note);
-            v.phase  = 0;
-            v.target = velocity / 127.0f;
-            v.gate   = true;
+            startMelodyVoice(v, note, velocity);
 
             return;
         }
@@ -442,12 +504,7 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
         }
     }
 
-    quietest->oneShot = false;
-
-    quietest->note   = note;
-    quietest->step   = stepForNote(note);
-    quietest->target = velocity / 127.0f;
-    quietest->gate   = true;
+    startMelodyVoice(*quietest, note, velocity);
 }
 
 void SpeakerController::noteOff(uint8_t note)

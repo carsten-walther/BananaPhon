@@ -25,6 +25,10 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   Fingerspitze; per Peak-Fenster (~10 ms) wird der Spitzenwert des
   Anschlags erfasst
 - **BLE-MIDI**: erscheint als Bluetooth-MIDI-Gerät (macOS, iOS, Windows 10+)
+- **FM-E-Piano**: 2-Operator-FM im DX7/Rhodes-Stil — heller,
+  glockiger Anschlag (fallender Modulationsindex), der bei gehaltener
+  Taste über ~2 s weich ausklingt; Skala, Oktave und Arpeggio wirken
+  wie beim Chip-Sound
 - **Drumkit-Modus**: die sieben Pads werden zu Kick, Snare, HiHats
   (zu/offen), zwei Toms und Clap — per MIDI als General-MIDI-
   Percussion auf Kanal 10 (jede DAW spielt sofort ein echtes
@@ -39,14 +43,14 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   in der Statusleiste zeigt den Modus
 - **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
   PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
-  Menü und wechselt zwischen **Lautstärke**, **Sound** (Chip/Drums),
-  **Wellenform**
+  Menü (auf dem zuletzt benutzten Parameter) und wechselt zwischen
+  **Sound** (Chip/Drums/Piano), **Wellenform**
   (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Arpeggio**
   (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
   schnelle Notenfolge zerlegt), **Skala** (Dur, Moll,
   Pentatonik, Blues) und **Oktave** (±2), Drehen
-  ändert den Wert; ohne Menü wirkt Drehen als Lautstärke-
-  Schnellzugriff. Alle Werte landen im NVS-Flash und überleben
+  ändert den Wert; die Lautstärke regelt Drehen bei
+  geschlossenem Menü direkt (Schnellzugriff). Alle Werte landen im NVS-Flash und überleben
   Neustarts — konfigurieren statt kompilieren
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
   öffnet das Gerät ein Captive Portal (AP "BananaPhon",

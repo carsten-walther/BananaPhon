@@ -14,9 +14,34 @@ enum Instrument : uint8_t
 {
     INST_CHIP = 0, // Synth mit wählbarer Wellenform
     INST_DRUMS,    // Drumkit (One-Shot-Synthese, GM-Percussion)
+    INST_PIANO,    // FM-E-Piano (2-Operator, DX7/Rhodes-Stil)
 
     INST_COUNT
 };
+
+// ------------------------------------------------
+// FM-E-Piano
+// ------------------------------------------------
+//
+// Zwei Sinus-Operatoren: der Modulator verschiebt die Phase des
+// Trägers. Der Modulationsindex startet hoch (heller, glockiger
+// Anschlag) und fällt schnell auf einen Sockel — der Ton wird weich.
+// Der Index ist in Sinustabellen-Schritten angegeben (1024 = Periode).
+
+// Klingt das Piano zu metallisch/glockig, senke PIANO_INDEX_START 
+// (z. B. auf 300) oder PIANO_MOD_RATIO auf 3 (weicher, orgeliger); 
+// klingt es zu brav, hoch auf 500/14.
+
+constexpr uint32_t PIANO_MOD_RATIO = 5; // Modulator = 7-faches der Tonhöhe
+
+constexpr float PIANO_INDEX_START = 350.0f;
+constexpr float PIANO_INDEX_FLOOR = 45.0f;
+constexpr float PIANO_INDEX_DECAY = 0.99940f; // Anschlags-Glanz, ~75 ms
+
+// Amplituden-Hüllkurve: langes Ausklingen bei gehaltener Taste
+// (~2 s auf -60 dB), schnelleres Release nach dem Loslassen (~150 ms)
+constexpr float PIANO_DECAY   = 0.999843f;
+constexpr float PIANO_RELEASE = 0.99791f;
 
 // ------------------------------------------------
 // Drumkit
@@ -61,4 +86,4 @@ constexpr DrumSpec drumSpecs[NUM_SENSORS] = {
     {0.0f, 1.0f, 0.99804f, 0.0f, 0.95f, 0.40f, 1.3f},       // Clap: mittleres Rauschen
 };
 
-constexpr const char* instrumentNames[INST_COUNT] = {"Chip", "Drums"};
+constexpr const char* instrumentNames[INST_COUNT] = {"Chip", "Drums", "Piano"};

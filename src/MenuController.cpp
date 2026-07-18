@@ -13,8 +13,7 @@ namespace
 {
 enum Item : uint8_t
 {
-    ITEM_VOLUME = 0,
-    ITEM_INSTRUMENT,
+    ITEM_INSTRUMENT = 0,
     ITEM_WAVEFORM,
     ITEM_ARP,
     ITEM_SCALE,
@@ -45,9 +44,6 @@ void MenuController::show()
         snprintf(text, sizeof(text), "Waveform: %s", waveformNames[Settings::waveform()]);
         break;
 
-    case ITEM_INSTRUMENT:
-        snprintf(text, sizeof(text), "Sound: %s", instrumentNames[Settings::instrument()]);
-        break;
 
     case ITEM_ARP:
         snprintf(text, sizeof(text), "Arp: %s", arpNames[Settings::arp()]);
@@ -61,10 +57,9 @@ void MenuController::show()
         snprintf(text, sizeof(text), "Octave: %+d", Settings::octave());
         break;
 
-    case ITEM_VOLUME:
+    case ITEM_INSTRUMENT:
     default:
-        snprintf(text, sizeof(text), "Volume: %d%%",
-                 static_cast<int>(Settings::volume() * 100.0f + 0.5f));
+        snprintf(text, sizeof(text), "Sound: %s", instrumentNames[Settings::instrument()]);
         break;
     }
 
@@ -102,8 +97,9 @@ void MenuController::handleClick()
 {
     if (!_open)
     {
+        // Menü öffnet auf dem zuletzt benutzten Parameter — so ist
+        // z. B. der Sound-Wechsel nur noch einen Klick entfernt
         _open = true;
-        _item = ITEM_VOLUME;
     }
     else
     {
@@ -151,6 +147,7 @@ void MenuController::handleRotation(int32_t detents)
     }
 
     case ITEM_INSTRUMENT:
+    default:
     {
         int32_t in = (Settings::instrument() + detents) % INST_COUNT;
 
@@ -229,11 +226,6 @@ void MenuController::handleRotation(int32_t detents)
 
         break;
     }
-
-    case ITEM_VOLUME:
-    default:
-        applyVolume(detents);
-        break;
     }
 
     markDirty();
