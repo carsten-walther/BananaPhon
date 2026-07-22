@@ -65,7 +65,11 @@ constexpr bool ENABLE_TOUCH_VELOCITY = true;
 constexpr uint8_t VELOCITY_MIN = 32;
 constexpr uint8_t VELOCITY_MAX = 127;
 
-constexpr float TOUCH_VELOCITY_RATIO_MAX = 1.60f;
+// 1.60 war zu eng: am Gerät sättigten satte Anschläge bei Velocity 127
+// und der Aftertouch-Druck lief beim Nachdrücken gegen die 127-Decke
+// (real gemessen). 2.00 spannt die Kennlinie weiter auf — Anschläge
+// differenzieren oben besser, und Nachdrücken hat Spielraum.
+constexpr float TOUCH_VELOCITY_RATIO_MAX = 2.00f;
 
 // Peak-Hold auf dem Display: nach dem Loslassen bleibt eine dünne
 // Markerlinie auf der Höhe der letzten Velocity stehen, hält dort

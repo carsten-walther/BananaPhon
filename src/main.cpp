@@ -181,6 +181,25 @@ static void updateAftertouch()
         }
 
         speaker.setPressure(playedNote[i], factor);
+
+        // Debug: Druckverlauf pro Pad, gedrosselt über denselben
+        // Deadband wie der MIDI-Versand — zum Einstellen der Kennlinie
+        static uint8_t lastLogged[NUM_SENSORS] = {0};
+
+        if (abs(static_cast<int>(p) - static_cast<int>(lastLogged[i])) >= AFTERTOUCH_DEADBAND)
+        {
+            lastLogged[i] = p;
+
+            Serial.print("Druck Pad ");
+            Serial.print(i);
+            Serial.print(": ");
+            Serial.print(p);
+            Serial.print(" (Delta ");
+            Serial.print(delta);
+            Serial.print(", Faktor ");
+            Serial.print(factor, 2);
+            Serial.println(")");
+        }
     }
 
     if (!anyMidi)
@@ -211,6 +230,9 @@ static void updateAftertouch()
 
     lastSentPressure = midiMax;
     aftertouchSent   = true;
+
+    Serial.print("Aftertouch ");
+    Serial.println(midiMax);
 }
 
 // ------------------------------------------------
@@ -338,6 +360,11 @@ void loop()
             }
 
             displayCtrl.drawPad(i, false);
+
+            // Zusammen mit den NoteOn-Zeilen zeigt das, ob eine
+            // gehaltene Note zwischendurch abreißt (Retrigger)
+            Serial.print("NoteOff ");
+            Serial.println(playedNote[i]);
         }
     }
 
