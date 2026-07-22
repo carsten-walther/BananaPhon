@@ -44,6 +44,13 @@ struct Voice
     float burstDecay        = 1.0f;
     float burstAmp          = 0.0f;
 
+    // Anstehender Retrigger: schlägt dieselbe Drum, während sie noch
+    // hörbar klingt, blendet die Stimme erst kurz aus (Choke-Blende)
+    // und der Audio-Task schlägt sie danach neu an — ein harter Reset
+    // mitten in der Schwingung würde knacken. retrigVel 0 = nichts.
+    uint8_t retrigDrum = 0;
+    uint8_t retrigVel  = 0;
+
     // Aftertouch: Lautstärke-Faktor aus dem Anpressdruck (1.0 = wie
     // angeschlagen). Nur für gehaltene Stimmen, One-Shots ignorieren ihn.
     float pressure = 1.0f;
@@ -91,17 +98,20 @@ uint8_t arpIndex      = 0;
 uint32_t arpCountdown = 0;
 bool arpAny           = false;
 
-// De-Klick-Blende pro Stimme beim Arp-Umschalten (~3 ms Rampe)
+// De-Klick-Blende pro Stimme beim Arp-Umschalten (lineare Rampe);
+// der Pro-Sample-Schritt wird in begin() aus der Abtastrate berechnet
 float arpGain[NUM_SENSORS] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 
-constexpr float ARP_FADE_PER_SAMPLE = 1.0f / 64.0f;
+constexpr float ARP_FADE_MS = 3.0f;
+
+float arpFadePerSample = 1.0f / 64.0f;
 
 // Sinus-Tabelle (1024 Einträge, in begin() gefüllt) — direkte
 // sinf()-Aufrufe pro Sample wären im Audio-Task zu teuer
 int16_t sineLut[1024];
 
-// Frames pro Renderblock (Stereo, 16 Bit) — bei 22,05 kHz sind
-// 128 Frames ~5,8 ms Latenz pro Block
+// Frames pro Renderblock (Stereo, 16 Bit) — die Latenz pro Block ist
+// FRAMES / SPEAKER_SAMPLE_RATE (bei 32 kHz: 128 Frames = 4 ms)
 constexpr int FRAMES = 128;
 
 // Phasenschritt für eine Frequenz (32 Bit = eine Periode)
@@ -114,6 +124,88 @@ uint32_t stepForFreq(float freq)
 uint32_t stepForNote(uint8_t note)
 {
     return stepForFreq(440.0f * powf(2.0f, (static_cast<int>(note) - 69) / 12.0f));
+}
+
+// Abklingfaktor pro Sample: erreicht -60 dB (Faktor 0.001) nach ms —
+// so bleiben die Hüllkurvenzeiten unabhängig von der Abtastrate
+float decayPerSample(float ms)
+{
+    return ms > 0.0f ? powf(0.001f, 1000.0f / (ms * SPEAKER_SAMPLE_RATE)) : 0.0f;
+}
+
+// Ein-Pol-Filterkoeffizient für eine Eckfrequenz in Hz
+float onePoleCoeff(float hz)
+{
+    return 1.0f - expf(-6.2831853f * hz / SPEAKER_SAMPLE_RATE);
+}
+
+// Zur Laufzeit aus den ms-Angaben in Drums.h berechnete Faktoren
+// (begin() füllt sie, bevor der Audio-Task startet)
+float pianoDecay      = 1.0f;
+float pianoRelease    = 1.0f;
+float pianoIndexDecay = 1.0f;
+float drumChokeDecay  = 1.0f;
+
+// Schlägt die Drum-Stimme für Pad d an. Wird aus noteOn (Loop-Task)
+// gerufen — und aus dem Audio-Task für verzögerte Retrigger, nachdem
+// die alte Schwingung ausgeblendet ist (siehe Voice::retrigVel).
+void startDrumVoice(Voice& v, uint8_t d, uint8_t velocity)
+{
+    const DrumSpec& spec = drumSpecs[d];
+
+    v.note    = drumNotes[d];
+    v.gate    = false; // One-Shot: kein Gate, Arp bleibt inaktiv
+    v.oneShot = true;
+    v.fm      = false;
+
+    // Sinus am Nulldurchgang starten. Der Versuch, den Beater-Klick
+    // über einen Start im Sinusmaximum zu erzeugen, hat auf dem echten
+    // Lautsprecher nur geknackt (Kick und Toms: Sprung von 0 auf
+    // Vollausschlag in einem Sample). Der Punch kommt aus dem
+    // Pitch-Sweep, nicht aus der Sprungstelle.
+    v.phase     = 0;
+    v.step      = spec.freq > 0.0f ? stepForFreq(spec.freq) : 0;
+    v.stepFloor = spec.pitchFloor > 0.0f ? stepForFreq(spec.pitchFloor) : 0;
+
+    // Sweep-Faktor aus der Zielzeit: erreicht den Sockel nach
+    // sweepMs, unabhängig von der Abtastrate
+    v.pitchDecay = spec.freq > 0.0f && spec.pitchFloor > 0.0f && spec.sweepMs > 0.0f
+                       ? expf(logf(spec.pitchFloor / spec.freq) * 1000.0f /
+                              (spec.sweepMs * SPEAKER_SAMPLE_RATE))
+                       : 1.0f;
+
+    v.ampDecay   = decayPerSample(spec.decayMs);
+    v.toneMix    = spec.toneMix;
+    v.noiseMix   = spec.noiseMix;
+    v.noiseHp    = spec.noiseHp;
+    v.gain       = spec.gain;
+    v.noiseState = 0.0f;
+
+    // Härter angeschlagene Felle klingen heller: die Schlagstärke
+    // öffnet den Rausch-Tiefpass (skaliert die Eckfrequenz). Beim
+    // Hochpass (HiHats, Clap) wäre die Richtung nicht eindeutig —
+    // der bleibt fest.
+    v.noiseLpf = onePoleCoeff(
+        spec.noiseHp ? spec.noiseCutoff
+                     : spec.noiseCutoff *
+                           (DRUM_VEL_TONE_MIN + (1.0f - DRUM_VEL_TONE_MIN) * velocity / 127.0f));
+
+    // Mehrfach-Anschlag: das Ausklingen zwischen den Bursts wird
+    // aus ihrem Abstand abgeleitet (auf 10 % je Intervall)
+    v.burstsLeft     = spec.bursts;
+    v.burstSamples   = static_cast<uint32_t>(spec.burstMs * 0.001f * SPEAKER_SAMPLE_RATE);
+    v.burstCountdown = v.burstSamples;
+    v.burstDecay     = spec.bursts > 0 && v.burstSamples > 0
+                           ? expf(logf(0.1f) / static_cast<float>(v.burstSamples))
+                           : 1.0f;
+
+    // Schlagstärke direkt setzen — der harte Einsatz gehört
+    // zum Drum-Transienten
+    v.amp      = velocity / 127.0f;
+    v.target   = v.amp;
+    v.burstAmp = v.amp;
+
+    v.retrigVel = 0;
 }
 
 // Kopffreiheit vor der Sättigung: sieben Melodie-Stimmen können sich
@@ -216,7 +308,7 @@ void audioTask(void*)
 
                 if (arpGain[i] < gainTarget)
                 {
-                    arpGain[i] += ARP_FADE_PER_SAMPLE;
+                    arpGain[i] += arpFadePerSample;
 
                     if (arpGain[i] > 1.0f)
                     {
@@ -225,7 +317,7 @@ void audioTask(void*)
                 }
                 else if (arpGain[i] > gainTarget)
                 {
-                    arpGain[i] -= ARP_FADE_PER_SAMPLE;
+                    arpGain[i] -= arpFadePerSample;
 
                     if (arpGain[i] < 0.0f)
                     {
@@ -271,6 +363,13 @@ void audioTask(void*)
                     {
                         v.amp    = 0.0f;
                         v.target = 0.0f;
+
+                        // Verzögerter Retrigger: die Ausblend-Rampe ist
+                        // durch, jetzt den anstehenden Schlag starten
+                        if (v.retrigVel > 0)
+                        {
+                            startDrumVoice(v, v.retrigDrum, v.retrigVel);
+                        }
 
                         continue;
                     }
@@ -321,7 +420,7 @@ void audioTask(void*)
                 {
                     // FM-E-Piano: exponentielles Ausklingen — lang bei
                     // gehaltener Taste, schneller nach dem Loslassen
-                    v.amp *= v.gate ? PIANO_DECAY : PIANO_RELEASE;
+                    v.amp *= v.gate ? pianoDecay : pianoRelease;
 
                     if (v.amp < 0.001f)
                     {
@@ -333,7 +432,7 @@ void audioTask(void*)
 
                     // Anschlags-Glanz: Modulationsindex fällt auf den Sockel
                     v.fmIndex =
-                        PIANO_INDEX_FLOOR + (v.fmIndex - PIANO_INDEX_FLOOR) * PIANO_INDEX_DECAY;
+                        PIANO_INDEX_FLOOR + (v.fmIndex - PIANO_INDEX_FLOOR) * pianoIndexDecay;
 
                     v.phase += v.step;
                     v.modPhase += v.step * PIANO_MOD_RATIO;
@@ -432,6 +531,15 @@ void SpeakerController::begin()
     attackPerSample  = 1.0f / (SPEAKER_ATTACK_MS * 0.001f * SPEAKER_SAMPLE_RATE);
     releasePerSample = 1.0f / (SPEAKER_RELEASE_MS * 0.001f * SPEAKER_SAMPLE_RATE);
 
+    // ms-Angaben aus Drums.h in Pro-Sample-Faktoren umrechnen — vor
+    // dem Start des Audio-Tasks, der sie liest
+    pianoDecay      = decayPerSample(PIANO_DECAY_MS);
+    pianoRelease    = decayPerSample(PIANO_RELEASE_MS);
+    pianoIndexDecay = expf(-1000.0f / (PIANO_INDEX_DECAY_MS * SPEAKER_SAMPLE_RATE));
+    drumChokeDecay  = decayPerSample(DRUM_CHOKE_MS);
+
+    arpFadePerSample = 1000.0f / (ARP_FADE_MS * SPEAKER_SAMPLE_RATE);
+
     for (int i = 0; i < 1024; i++)
     {
         sineLut[i] = static_cast<int16_t>(sinf(i * 6.2831853f / 1024.0f) * 32000.0f);
@@ -509,10 +617,6 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
 
             const DrumSpec& spec = drumSpecs[d];
 
-            v.note    = note;
-            v.gate    = false; // One-Shot: kein Gate, Arp bleibt inaktiv
-            v.oneShot = true;
-            v.fm      = false;
             // Choke: dieser Schlag beendet eine andere Drum (geschlossene
             // HiHat würgt die offene ab, wie auf einem echten Kit) —
             // kurzer Fade statt hartem Abschalten, sonst knackt es
@@ -520,46 +624,30 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
             {
                 Voice& choked = voices[spec.chokes];
 
-                choked.ampDecay   = DRUM_CHOKE_DECAY;
+                choked.ampDecay   = drumChokeDecay;
                 choked.burstsLeft = 0;
+
+                // Auch einen anstehenden Retrigger verwerfen — sonst
+                // stünde die abgewürgte Drum gleich wieder auf
+                choked.retrigVel = 0;
             }
 
-            // Sinus am Maximum starten: der Sprung von 0 auf Vollaus-
-            // schlag IST der Anschlagsklick (Beater auf dem Fell). Bei
-            // reinen Rausch-Drums bleibt die Phase egal.
-            v.phase      = spec.toneMix > 0.0f ? 0x40000000u : 0;
-            v.step       = spec.freq > 0.0f ? stepForFreq(spec.freq) : 0;
-            v.stepFloor  = spec.pitchFloor > 0.0f ? stepForFreq(spec.pitchFloor) : 0;
-            v.pitchDecay = spec.pitchDecay;
-            v.ampDecay   = spec.ampDecay;
-            v.toneMix    = spec.toneMix;
-            v.noiseMix   = spec.noiseMix;
-            v.noiseHp    = spec.noiseHp;
-            v.gain       = spec.gain;
-            v.noiseState = 0.0f;
+            // Klingt dieselbe Drum noch hörbar, nicht hart hineinsetzen:
+            // Phase und Amplitude sprängen mitten in der Schwingung —
+            // das Knacken bei schnellen Wiederholungen. Stattdessen per
+            // Choke-Blende ausblenden; der Audio-Task schlägt danach
+            // neu an (kostet höchstens die ~5 ms der Blende).
+            if (v.oneShot && v.amp > 0.01f)
+            {
+                v.ampDecay   = drumChokeDecay;
+                v.burstsLeft = 0;
+                v.retrigDrum = d;
+                v.retrigVel  = velocity;
 
-            // Härter angeschlagene Felle klingen heller: die Schlagstärke
-            // öffnet den Rausch-Tiefpass. Beim Hochpass (HiHats, Clap)
-            // wäre die Richtung nicht eindeutig — der bleibt fest.
-            v.noiseLpf = spec.noiseHp
-                             ? spec.noiseLpf
-                             : spec.noiseLpf * (DRUM_VEL_TONE_MIN +
-                                                (1.0f - DRUM_VEL_TONE_MIN) * velocity / 127.0f);
+                return;
+            }
 
-            // Mehrfach-Anschlag: das Ausklingen zwischen den Bursts wird
-            // aus ihrem Abstand abgeleitet (auf 10 % je Intervall)
-            v.burstsLeft     = spec.bursts;
-            v.burstSamples   = static_cast<uint32_t>(spec.burstMs * 0.001f * SPEAKER_SAMPLE_RATE);
-            v.burstCountdown = v.burstSamples;
-            v.burstDecay     = spec.bursts > 0 && v.burstSamples > 0
-                                   ? expf(logf(0.1f) / static_cast<float>(v.burstSamples))
-                                   : 1.0f;
-
-            // Schlagstärke direkt setzen — der harte Einsatz gehört
-            // zum Drum-Transienten
-            v.amp      = velocity / 127.0f;
-            v.target   = v.amp;
-            v.burstAmp = v.amp;
+            startDrumVoice(v, d, velocity);
 
             return;
         }
