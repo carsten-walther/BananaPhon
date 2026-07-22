@@ -207,7 +207,10 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
   `TOUCH_BASELINE_FILTER` bestimmt die Trägheit)
 - Lautsprecher (`ENABLE_SPEAKER`, I2S-Pins, `SPEAKER_SAMPLE_RATE`,
   `SPEAKER_MASTER_VOLUME`, Hüllkurve `SPEAKER_ATTACK_MS` /
-  `SPEAKER_RELEASE_MS`)
+  `SPEAKER_RELEASE_MS`); alle Hüllkurvenzeiten sind in Millisekunden
+  angegeben und werden zur Laufzeit auf die Abtastrate umgerechnet —
+  die Rate ist frei wählbar, ohne den Klang zu verschieben (Default
+  32 kHz, damit HiHats und Clap bis 16 kHz zischen)
 - Rotary-Encoder (`ENABLE_ENCODER`, Pins, `ENCODER_STEPS_PER_DETENT`,
   `ENCODER_VOLUME_STEP`)
 - Arpeggio-Stufen (`ARP_STEP_MS`)
@@ -222,16 +225,17 @@ Instrumentspezifisches liegt in [`include/Drums.h`](include/Drums.h):
 
 - Drumkit: GM-Notennummern (`drumNotes`), Tastenkürzel (`drumLabels`)
   und die Synthese-Rezepte (`drumSpecs`) — je Drum Startfrequenz und
-  Sockel des Tonhöhen-Sweeps (`freq` / `pitchFloor`), Tonhöhen- und
-  Amplituden-Abfall, Ton-/Rausch-Mischung, Rauschfilter
-  (`noiseLpf` als Koeffizient, `noiseHp` schaltet auf Hochpass),
-  Mehrfach-Anschlag (`bursts` / `burstMs`), Choke-Ziel (`chokes`,
-  -1 = keins) und Pegel-Ausgleich. Dazu `DRUM_CHOKE_DECAY`
-  (Ausklingen einer abgewürgten Drum) und `DRUM_VEL_TONE_MIN`
-  (wie stark die Anschlagstärke die Helligkeit öffnet)
+  Sockel des Tonhöhen-Sweeps (`freq` / `pitchFloor`), Sweep- und
+  Ausklingzeit in Millisekunden (`sweepMs` / `decayMs`),
+  Ton-/Rausch-Mischung, Rauschfilter (`noiseCutoff` als Eckfrequenz in
+  Hz, `noiseHp` schaltet auf Hochpass), Mehrfach-Anschlag
+  (`bursts` / `burstMs`), Choke-Ziel (`chokes`, -1 = keins) und
+  Pegel-Ausgleich. Dazu `DRUM_CHOKE_MS` (Ausklingen einer abgewürgten
+  Drum) und `DRUM_VEL_TONE_MIN` (wie stark die Anschlagstärke die
+  Helligkeit öffnet)
 - FM-E-Piano: Modulationsverhältnis (`PIANO_MOD_RATIO`), Anschlagsglanz
-  (`PIANO_INDEX_START` / `_FLOOR` / `_DECAY`) sowie Ausklingen und
-  Release (`PIANO_DECAY`, `PIANO_RELEASE`)
+  (`PIANO_INDEX_START` / `_FLOOR` / `_DECAY_MS`) sowie Ausklingen und
+  Release in Millisekunden (`PIANO_DECAY_MS`, `PIANO_RELEASE_MS`)
 
 **Hinweis zu USB-Host-MIDI:** Der USB-C-Port wird dann exklusiv vom
 USB-Host belegt — der serielle Monitor funktioniert nicht mehr, und es

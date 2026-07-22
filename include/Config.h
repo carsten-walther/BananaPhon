@@ -211,7 +211,13 @@ constexpr uint8_t PIN_I2S_BCLK  = 21;
 constexpr uint8_t PIN_I2S_LRCLK = 17;
 constexpr uint8_t PIN_I2S_DOUT  = 16;
 
-constexpr uint32_t SPEAKER_SAMPLE_RATE = 22050;
+// Abtastrate des Synths. Alle Hüllkurvenzeiten (Drums.h, Attack/
+// Release unten) sind in Millisekunden angegeben und werden zur
+// Laufzeit umgerechnet — die Rate ist damit frei wählbar, ohne den
+// Klangcharakter zu verschieben. 32 kHz hebt das Rauschdach von 11 auf
+// 16 kHz: HiHats und Clap zischen, statt gedeckelt zu rauschen. Kostet
+// ~45 % mehr Rechenzeit im Audio-Task (unkritisch, eigener Core).
+constexpr uint32_t SPEAKER_SAMPLE_RATE = 32000;
 
 // Gesamtlautstärke 0.0–1.0 (Hardware-Feintrim über den Gain-Pin
 // des MAX98357A)
