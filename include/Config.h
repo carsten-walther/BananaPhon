@@ -196,6 +196,12 @@ constexpr uint8_t PIN_BAT_VOLT = 4;
 // Messintervall in Millisekunden
 constexpr uint32_t BATTERY_UPDATE_MS = 5000;
 
+// Warnung: unter BATTERY_WARN_PERCENT blinkt das Batterie-Symbol (nur
+// im Akkubetrieb, nicht an USB), bevor der LiPo in die Tiefentladung
+// läuft. BATTERY_WARN_BLINK_MS ist die Halbperiode des Blinkens.
+constexpr uint8_t BATTERY_WARN_PERCENT   = 5;
+constexpr uint32_t BATTERY_WARN_BLINK_MS = 600;
+
 // ------------------------------------------------
 // Touch-Kalibrierung (ESP32-S3)
 // ------------------------------------------------

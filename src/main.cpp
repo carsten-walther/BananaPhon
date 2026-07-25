@@ -497,6 +497,9 @@ void loop()
 
     displayCtrl.updateToast();
 
+    // Batterie-Symbol bei niedrigem Ladestand blinken lassen (getaktet)
+    displayCtrl.updateBatteryWarning();
+
     // Encoder: Klick öffnet das Settings-Menü bzw. wechselt den
     // Parameter, Drehen ändert den Wert (geschlossen: Lautstärke-
     // Schnellzugriff). Menü-Timeout und NVS-Speichern in update().

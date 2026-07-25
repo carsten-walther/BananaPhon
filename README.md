@@ -62,16 +62,17 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
 - **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
   PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
   Menü (auf dem zuletzt benutzten Parameter) und wechselt zwischen
-  **Sound** (Chip/Drums/Piano), **Wellenform**
+  **Sound** (Piano/Drums/Chip), **Wellenform**
   (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Arpeggio**
   (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
   schnelle Notenfolge zerlegt), **FX** (Off/Delay/Reverb —
   Echo bzw. Freeverb-Hall auf die Lautsprecher-Summe), **Skala** (Dur, Moll,
   Pentatonik, Blues), **Oktave** (±2), **MIDI** (On/Off —
   schaltet die MIDI-Ausgabe ab und spielt nur noch über den
-  Lautsprecher) und **Calibrate** (Drehen löst eine Rekalibrierung
-  aller Sensoren aus), Drehen
-  ändert den Wert; die Lautstärke regelt Drehen bei
+  Lautsprecher), **Calibrate** (Drehen löst eine Rekalibrierung
+  aller Sensoren aus) und **Factory Reset** (setzt nach einer
+  Sicherheits-Rückfrage alle Einstellungen zurück und startet neu),
+  Drehen ändert den Wert; die Lautstärke regelt Drehen bei
   geschlossenem Menü direkt (Schnellzugriff). Alle Werte landen im NVS-Flash und überleben
   Neustarts — konfigurieren statt kompilieren
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
@@ -98,7 +99,8 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   unteren Tasten-Bereich, Status-Icons mittig in der oberen Leiste
   (Bluetooth, WLAN, Note für RTP, Zahnrad fürs Setup-Portal,
   Lautsprecher für den Standalone-Betrieb), Batterieanzeige mit
-  Ladestand bzw. USB-Erkennung
+  Ladestand bzw. USB-Erkennung — unter `BATTERY_WARN_PERCENT` (Default
+  5 %) blinkt das Symbol als Warnung vor der Tiefentladung
 - **Deep Sleep nach Inaktivität**: nach 5 Minuten ohne Bedienung
   (`DEEP_SLEEP_TIMEOUT_MS`) schaltet das Gerät Display und Funk ab und
   geht in den Tiefschlaf (Stromaufnahme im µA-Bereich, statt Stunden
@@ -281,6 +283,8 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
   Änderung im Menü, danach zählen die im NVS gespeicherten Werte
 - Display (`DISPLAY_ROTATION`, `DISPLAY_BRIGHNESS`, Einblenddauer
   `DISPLAY_TOAST_MS`) und Batterie-Messintervall (`BATTERY_UPDATE_MS`)
+- Batterie-Warnung (`BATTERY_WARN_PERCENT`, Blink-Takt
+  `BATTERY_WARN_BLINK_MS`)
 - Deep Sleep (`ENABLE_DEEP_SLEEP`, Inaktivitäts-Timeout
   `DEEP_SLEEP_TIMEOUT_MS`); Aufwecken durch Drehen des Encoders (die
   Rekalibrierung liegt im Menüpunkt **Calibrate**)

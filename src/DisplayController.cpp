@@ -630,6 +630,68 @@ void DisplayController::updatePeaks()
     }
 }
 
+// Zeichnet das Batterie-Symbol aus dem zuletzt gemessenen Zustand
+// (_lastBatPercent / _lastUsbPower). visible=false löscht nur den
+// Bereich — die Aus-Phase des Warnblinkens.
+void DisplayController::renderBattery(bool visible)
+{
+    int32_t x = display.width() - BAT_MARGIN - BAT_NUB - BAT_WIDTH;
+    int32_t y = BAT_Y;
+
+    // Anzeigebereich löschen (Symbol + Text links davon)
+    display.fillRect(x - 46, y - 2, 46 + BAT_WIDTH + BAT_NUB + BAT_MARGIN, BAT_HEIGHT + 4,
+                     TFT_BLACK);
+
+    if (!visible)
+    {
+        return;
+    }
+
+    // Gehäuse mit Kontakt-Nase
+    display.drawRect(x, y, BAT_WIDTH, BAT_HEIGHT, TFT_WHITE);
+
+    display.fillRect(x + BAT_WIDTH, y + (BAT_HEIGHT - 6) / 2, BAT_NUB, 6, TFT_WHITE);
+
+    display.setFont(&fonts::DejaVu12);
+
+    display.setTextSize(1);
+
+    display.setTextDatum(textdatum_t::middle_right);
+
+    if (_lastUsbPower)
+    {
+        // USB-Versorgung: Symbol gefüllt, Beschriftung "USB"
+        display.fillRect(x + 2, y + 2, BAT_WIDTH - 4, BAT_HEIGHT - 4, TFT_GREEN);
+
+        display.setTextColor(TFT_WHITE);
+
+        display.drawString("USB", x - 4, y + BAT_HEIGHT / 2);
+    }
+    else
+    {
+        // Füllstand: grün / gelb / rot
+        uint16_t color =
+            _lastBatPercent > 50 ? TFT_GREEN : (_lastBatPercent > 20 ? TFT_YELLOW : TFT_RED);
+
+        int32_t fill = (BAT_WIDTH - 4) * _lastBatPercent / 100;
+
+        if (fill > 0)
+        {
+            display.fillRect(x + 2, y + 2, fill, BAT_HEIGHT - 4, color);
+        }
+
+        display.setTextColor(TFT_WHITE);
+
+        char label[8];
+
+        snprintf(label, sizeof(label), "%d%%", _lastBatPercent);
+
+        display.drawString(label, x - 4, y + BAT_HEIGHT / 2);
+    }
+
+    display.unloadFont();
+}
+
 void DisplayController::showBattery(uint32_t milliVolts)
 {
     bool usbPower = milliVolts > USB_POWER_MV;
@@ -653,55 +715,41 @@ void DisplayController::showBattery(uint32_t milliVolts)
     _lastUsbPower   = usbPower;
     _lastBatPercent = percent;
 
-    int32_t x = display.width() - BAT_MARGIN - BAT_NUB - BAT_WIDTH;
-    int32_t y = BAT_Y;
+    // Nach einem echten Update immer sichtbar starten (Blink-Phase reset)
+    _batBlinkOn   = true;
+    _lastBatBlink = millis();
 
-    // Anzeigebereich löschen (Symbol + Text links davon)
-    display.fillRect(x - 46, y - 2, 46 + BAT_WIDTH + BAT_NUB + BAT_MARGIN, BAT_HEIGHT + 4,
-                     TFT_BLACK);
+    renderBattery(true);
+}
 
-    // Gehäuse mit Kontakt-Nase
-    display.drawRect(x, y, BAT_WIDTH, BAT_HEIGHT, TFT_WHITE);
+void DisplayController::updateBatteryWarning()
+{
+    // Warnung nur im Akkubetrieb unter der Schwelle
+    bool warn = _lastBatPercent >= 0 && _lastBatPercent <= BATTERY_WARN_PERCENT && !_lastUsbPower;
 
-    display.fillRect(x + BAT_WIDTH, y + (BAT_HEIGHT - 6) / 2, BAT_NUB, 6, TFT_WHITE);
-
-    display.setFont(&fonts::DejaVu12);
-
-    display.setTextSize(1);
-
-    display.setTextDatum(textdatum_t::middle_right);
-
-    if (usbPower)
+    if (!warn)
     {
-        // USB-Versorgung: Symbol gefüllt, Beschriftung "USB"
-        display.fillRect(x + 2, y + 2, BAT_WIDTH - 4, BAT_HEIGHT - 4, TFT_GREEN);
-
-        display.setTextColor(TFT_WHITE);
-
-        display.drawString("USB", x - 4, y + BAT_HEIGHT / 2);
-    }
-    else
-    {
-        // Füllstand: grün / gelb / rot
-        uint16_t color = percent > 50 ? TFT_GREEN : (percent > 20 ? TFT_YELLOW : TFT_RED);
-
-        int32_t fill = (BAT_WIDTH - 4) * percent / 100;
-
-        if (fill > 0)
+        // Falls das Symbol in der Aus-Phase hängen blieb: wieder zeigen
+        if (!_batBlinkOn)
         {
-            display.fillRect(x + 2, y + 2, fill, BAT_HEIGHT - 4, color);
+            _batBlinkOn = true;
+
+            renderBattery(true);
         }
 
-        display.setTextColor(TFT_WHITE);
-
-        char label[8];
-
-        snprintf(label, sizeof(label), "%d%%", percent);
-
-        display.drawString(label, x - 4, y + BAT_HEIGHT / 2);
+        return;
     }
 
-    display.unloadFont();
+    if (millis() - _lastBatBlink < BATTERY_WARN_BLINK_MS)
+    {
+        return;
+    }
+
+    _lastBatBlink = millis();
+
+    _batBlinkOn = !_batBlinkOn;
+
+    renderBattery(_batBlinkOn);
 }
 
 void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, bool speaker)

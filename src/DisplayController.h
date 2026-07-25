@@ -59,6 +59,11 @@ public:
     // verrechnet). Werte über ~4,4 V bedeuten USB-Versorgung.
     void showBattery(uint32_t milliVolts);
 
+    // Lässt das Batterie-Symbol unter BATTERY_WARN_PERCENT blinken
+    // (nur im Akkubetrieb) — regelmäßig aus loop() aufrufen, intern
+    // auf BATTERY_WARN_BLINK_MS getaktet.
+    void updateBatteryWarning();
+
     // Vollbild-Anzeige während eines OTA-Firmware-Updates. percent < 0
     // baut den Screen neu auf (Titel + Statuszeile, kein Balken);
     // percent >= 0 aktualisiert nur den Fortschrittsbalken. `color`
@@ -84,6 +89,14 @@ private:
 
     int _lastBatPercent = -1;
     bool _lastUsbPower  = false;
+
+    // Zeichnet das Batterie-Symbol aus dem letzten Messwert
+    // (visible=false: nur Bereich löschen, Blink-Aus-Phase)
+    void renderBattery(bool visible);
+
+    // Warnblinken unter niedrigem Ladestand
+    bool _batBlinkOn       = true;
+    uint32_t _lastBatBlink = 0;
 
     // Peak-Hold je Pad: Markerhöhe in px ab Pad-Unterkante (0 = kein
     // Marker), Velocity für die Markerfarbe, Ende der Haltezeit, und

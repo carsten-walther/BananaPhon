@@ -12,12 +12,12 @@ namespace
 Preferences prefs;
 
 float vol    = SPEAKER_MASTER_VOLUME;
-uint8_t wf   = WAVE_TRIANGLE;
+uint8_t wf   = WAVE_CHIP;
 uint8_t sc   = SCALE_MAJOR;
 uint8_t arpM = 0;
-uint8_t inst = INST_CHIP;
+uint8_t inst = INST_PIANO;
 int8_t oct   = 0;
-bool midiOn  = true;   // MIDI-Ausgabe standardmäßig an
+bool midiOn  = false;  // MIDI-Ausgabe standardmäßig aus (Standalone)
 uint8_t fxM  = FX_OFF; // Effekt am Lautsprecher, standardmäßig aus
 } // namespace
 
@@ -26,12 +26,12 @@ void Settings::begin()
     prefs.begin("bananaphon", false);
 
     vol    = prefs.getFloat("vol", SPEAKER_MASTER_VOLUME);
-    wf     = prefs.getUChar("wave", WAVE_TRIANGLE);
+    wf     = prefs.getUChar("wave", WAVE_CHIP);
     sc     = prefs.getUChar("scale", SCALE_MAJOR);
     arpM   = prefs.getUChar("arp", 0);
-    inst   = prefs.getUChar("inst", INST_CHIP);
+    inst   = prefs.getUChar("inst", INST_PIANO);
     oct    = prefs.getChar("oct", 0);
-    midiOn = prefs.getBool("midi", true);
+    midiOn = prefs.getBool("midi", false);
     fxM    = prefs.getUChar("fx", FX_OFF);
 
     // Gegen ungültige Altbestände absichern (z. B. nach Firmware-Wechsel)
@@ -42,7 +42,7 @@ void Settings::begin()
 
     if (wf >= WAVE_COUNT)
     {
-        wf = WAVE_TRIANGLE;
+        wf = WAVE_CHIP;
     }
 
     if (sc >= SCALE_COUNT)
@@ -57,7 +57,7 @@ void Settings::begin()
 
     if (inst >= INST_COUNT)
     {
-        inst = INST_CHIP;
+        inst = INST_PIANO;
     }
 
     if (oct < -OCTAVE_RANGE || oct > OCTAVE_RANGE)
@@ -81,6 +81,13 @@ void Settings::save()
     prefs.putChar("oct", oct);
     prefs.putBool("midi", midiOn);
     prefs.putUChar("fx", fxM);
+}
+
+void Settings::factoryReset()
+{
+    // Alle Schlüssel im Namespace löschen; nach einem Neustart liefert
+    // begin() für jeden Wert wieder den Default aus der Config.h
+    prefs.clear();
 }
 
 float Settings::volume()

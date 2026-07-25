@@ -9,6 +9,10 @@ namespace Settings
 void begin(); // aus dem NVS laden
 void save();  // in den NVS schreiben (nur bei Bedarf aufrufen)
 
+// Werkseinstellungen: alle gespeicherten Werte im NVS löschen. Danach
+// ist ein Neustart nötig (begin() lädt dann die Defaults aus Config.h).
+void factoryReset();
+
 float volume();
 void setVolume(float volume);
 

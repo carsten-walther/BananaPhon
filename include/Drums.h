@@ -8,13 +8,15 @@
 // Instrumente
 // ------------------------------------------------
 
-// Neue Instrumente werden hinten angehängt, damit gespeicherte
-// NVS-Werte gültig bleiben.
+// Reihenfolge = Durchschaltreihenfolge im Menü (Piano, Drums, Synth).
+// Achtung: Die Werte sind zugleich die im NVS gespeicherten Indizes —
+// wird die Reihenfolge geändert, verschieben sich gespeicherte Werte
+// (nach dem Flashen ggf. einmal per Werksreset zurücksetzen).
 enum Instrument : uint8_t
 {
-    INST_CHIP = 0, // Synth mit wählbarer Wellenform
-    INST_DRUMS,    // Drumkit (One-Shot-Synthese, GM-Percussion)
-    INST_PIANO,    // FM-E-Piano (2-Operator, DX7/Rhodes-Stil)
+    INST_PIANO = 0, // FM-E-Piano (2-Operator, DX7/Rhodes-Stil)
+    INST_DRUMS,     // Drumkit (One-Shot-Synthese, GM-Percussion)
+    INST_CHIP,      // Synth mit wählbarer Wellenform
 
     INST_COUNT
 };
@@ -129,4 +131,4 @@ constexpr DrumSpec drumSpecs[NUM_SENSORS] = {
 };
 // clang-format on
 
-constexpr const char* instrumentNames[INST_COUNT] = {"Chip", "Drums", "Piano"};
+constexpr const char* instrumentNames[INST_COUNT] = {"Piano", "Drums", "Chip"};

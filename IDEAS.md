@@ -57,6 +57,12 @@ wo das Gerät herkommt.
   Gegenpegel geweckt — so weckt jede Drehung unabhängig von der
   Rasterstellung. Die manuelle Rekalibrierung wanderte dabei vom
   (unzugänglichen) Board-Button in den Menüpunkt **Calibrate**.
+- **Batterie-Warnung** — unter `BATTERY_WARN_PERCENT` (Default 5 %)
+  blinkt das Batterie-Symbol im Akkubetrieb, bevor der LiPo in die
+  Tiefentladung läuft.
+- **Werkseinstellungen** — Menüpunkt **Factory Reset**: setzt nach einer
+  zweistufigen Sicherheits-Rückfrage (zweimal drehen) alle NVS-Werte
+  zurück und startet neu.
 
 ## Klang & Musikalität (der größte Spielraum)
 
@@ -88,16 +94,10 @@ mit dem Synth komplett da, es fehlt nur die Empfangsseite im
 
 ## Bedienung & Anzeige
 
-**Batterie-Warnung** — die Anzeige ist rein passiv. Unter ~5 % könnte
-das Batterie-Symbol blinken, bevor der LiPo in die Tiefentladung läuft.
-
 **Weitere Menüpunkte** — Touch-Schwellen und Velocity-Kennlinie stecken
 noch in der `Config.h`. Sie sind die naheliegendsten Kandidaten fürs
 Menü, sobald das Nachjustieren am Gerät (neues Gemüse, andere
 Umgebung) lästig wird.
-
-**Werkseinstellungen** - Ein Menüpunkt für Werkseinstellungen zum 
-Zurücksetzen des Gerätes wäre hilfreich.
 
 ## Robustheit & Strom
 

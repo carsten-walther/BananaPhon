@@ -41,4 +41,7 @@ private:
     uint32_t _saveAt = 0;
 
     bool _calibrateRequested = false;
+
+    // Werkseinstellungen: erst nach einer zweiten Drehung ausführen
+    bool _resetArmed = false;
 };

@@ -21,6 +21,7 @@ enum Item : uint8_t
     ITEM_OCTAVE,
     ITEM_MIDI,
     ITEM_CALIBRATE,
+    ITEM_RESET,
 
     ITEM_COUNT
 };
@@ -75,6 +76,11 @@ void MenuController::show()
         snprintf(text, sizeof(text), "Calibrate: turn");
         break;
 
+    case ITEM_RESET:
+        // Zweistufig gegen versehentliches Zurücksetzen
+        snprintf(text, sizeof(text), _resetArmed ? "Reset: sure? turn" : "Factory Reset");
+        break;
+
     case ITEM_INSTRUMENT:
     default:
         snprintf(text, sizeof(text), "Sound: %s", instrumentNames[Settings::instrument()]);
@@ -113,6 +119,10 @@ void MenuController::markDirty()
 
 void MenuController::handleClick()
 {
+    // Jeder Klick entschärft einen angefangenen Werksreset (Wechsel
+    // des Parameters oder Öffnen des Menüs)
+    _resetArmed = false;
+
     if (!_open)
     {
         // Menü öffnet auf dem zuletzt benutzten Parameter — so ist
@@ -283,6 +293,30 @@ void MenuController::handleRotation(int32_t detents)
 
         return;
     }
+
+    case ITEM_RESET:
+    {
+        // Zweistufig: erste Drehung schärft, zweite führt aus. So löst
+        // ein versehentliches Antippen keinen Werksreset aus.
+        if (!_resetArmed)
+        {
+            _resetArmed = true;
+
+            show(); // zeigt jetzt die Rückfrage, hält das Menü offen
+
+            return;
+        }
+
+        Settings::factoryReset();
+
+        Serial.println("Werkseinstellungen — Neustart");
+
+        delay(200);
+
+        ESP.restart();
+
+        return;
+    }
     }
 
     markDirty();
@@ -295,6 +329,9 @@ void MenuController::update()
     if (_open && static_cast<int32_t>(millis() - _deadline) >= 0)
     {
         _open = false;
+
+        // Menü-Timeout entschärft einen angefangenen Werksreset
+        _resetArmed = false;
     }
 
     // Verzögert speichern: gebündelt 2 s nach der letzten Änderung,
