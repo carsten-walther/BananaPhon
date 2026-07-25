@@ -17,9 +17,9 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   mit automatischer Baseline-Kalibrierung beim Start und Hysterese
   gegen Prellen
 - **Baseline-Nachführung**: die Ruhewerte folgen langsamer Drift
-  (austrocknendes Gemüse, Temperatur) automatisch; der untere
-  Board-Button (GPIO 14) kalibriert jederzeit manuell neu — z. B.
-  nach dem Umstecken auf neues Gemüse
+  (austrocknendes Gemüse, Temperatur) automatisch; der Menüpunkt
+  **Calibrate** kalibriert jederzeit manuell neu — z. B. nach dem
+  Umstecken auf neues Gemüse
 - **Anschlagsdynamik**: die Velocity wird aus der Touch-Intensität
   abgeleitet (Kontaktfläche) — ein satter Griff klingt lauter als eine
   Fingerspitze; per Peak-Fenster (~10 ms) wird der Spitzenwert des
@@ -67,9 +67,10 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
   schnelle Notenfolge zerlegt), **FX** (Off/Delay/Reverb —
   Echo bzw. Freeverb-Hall auf die Lautsprecher-Summe), **Skala** (Dur, Moll,
-  Pentatonik, Blues), **Oktave** (±2) und **MIDI** (On/Off —
+  Pentatonik, Blues), **Oktave** (±2), **MIDI** (On/Off —
   schaltet die MIDI-Ausgabe ab und spielt nur noch über den
-  Lautsprecher), Drehen
+  Lautsprecher) und **Calibrate** (Drehen löst eine Rekalibrierung
+  aller Sensoren aus), Drehen
   ändert den Wert; die Lautstärke regelt Drehen bei
   geschlossenem Menü direkt (Schnellzugriff). Alle Werte landen im NVS-Flash und überleben
   Neustarts — konfigurieren statt kompilieren
@@ -98,11 +99,13 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   (Bluetooth, WLAN, Note für RTP, Zahnrad fürs Setup-Portal,
   Lautsprecher für den Standalone-Betrieb), Batterieanzeige mit
   Ladestand bzw. USB-Erkennung
-- **Deep Sleep nach Inaktivität**: nach 10 Minuten ohne Bedienung
+- **Deep Sleep nach Inaktivität**: nach 5 Minuten ohne Bedienung
   (`DEEP_SLEEP_TIMEOUT_MS`) schaltet das Gerät Display und Funk ab und
   geht in den Tiefschlaf (Stromaufnahme im µA-Bereich, statt Stunden
-  hält der Akku so Wochen). Der Rekalibrier-Button weckt es wieder —
-  danach bootet es normal neu
+  hält der Akku so Wochen). **Drehen des Encoders** weckt es wieder —
+  danach bootet es normal neu (der S3 kann aus dem Deep Sleep nur über
+  RTC-fähige Pins aufwachen; der Encoder-Taster GPIO43 gehört nicht
+  dazu, die Dreh-Spur auf GPIO18 schon)
 
 ## Hardware
 
@@ -139,19 +142,22 @@ Kanal 10 (siehe [`include/Drums.h`](include/Drums.h)).
 | 17   | I2S LRC → MAX98357A | — |
 | 16   | I2S DIN → MAX98357A | — |
 | 44   | Encoder A | — |
-| 18   | Encoder B | — |
+| 18   | Encoder B (weckt aus Deep Sleep, RTC-fähig) | — |
 | 43   | Encoder SW (Taster) | — |
-| 14   | Board-Button: Rekalibrierung | — |
 
 Der MAX98357A braucht zusätzlich 5V und GND; der Gain-Pin kann offen
 bleiben (9 dB). Encoder-Taster gegen GND, Pull-ups sind intern gesetzt.
 GPIO 43/44 sind U0TXD/U0RXD — frei nutzbar, weil der serielle Monitor
-auf dem S3 über natives USB-CDC läuft.
+auf dem S3 über natives USB-CDC läuft. Die Rekalibrierung sitzt im Menü
+(**Calibrate**), nicht mehr auf einem Board-Button.
+
+Deep Sleep weckt über die Encoder-Dreh-Spur (GPIO 18): der S3 kann aus
+dem Deep Sleep nur über RTC-fähige Pins (GPIO 0–21) aufwachen — der
+Encoder-Taster GPIO 43 gehört nicht dazu, GPIO 18 schon.
 
 Mehr interne Touch-Pins gibt es auf diesem Board nicht — GPIO 5–9
-gehören dem Display, GPIO 14 dem zweiten Button (hier: Rekalibrierung).
-Für mehr Eingänge bietet sich ein externer Touch-Controller
-(z. B. MPR121, I2C) an.
+gehören dem Display. Für mehr Eingänge bietet sich ein externer
+Touch-Controller (z. B. MPR121, I2C) an.
 
 ## Setup
 
@@ -181,8 +187,9 @@ nicht berührt werden — der Splash weist darauf hin.
 Im Betrieb führt die Firmware die Ruhewerte automatisch langsam nach
 (einstellbar über `TOUCH_BASELINE_INTERVAL_MS` / `TOUCH_BASELINE_FILTER`
 in `Config.h`). Nach größeren Änderungen — neues Gemüse, umgesteckte
-Klemmen — genügt ein Druck auf den **unteren Board-Button**: alle
-Sensoren werden neu kalibriert, dabei ebenfalls nicht berühren.
+Klemmen — genügt der Menüpunkt **Calibrate** (Encoder-Klick bis dorthin,
+dann drehen): alle Sensoren werden neu kalibriert, dabei ebenfalls nicht
+berühren.
 
 ## MIDI verbinden
 
@@ -275,7 +282,8 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
 - Display (`DISPLAY_ROTATION`, `DISPLAY_BRIGHNESS`, Einblenddauer
   `DISPLAY_TOAST_MS`) und Batterie-Messintervall (`BATTERY_UPDATE_MS`)
 - Deep Sleep (`ENABLE_DEEP_SLEEP`, Inaktivitäts-Timeout
-  `DEEP_SLEEP_TIMEOUT_MS`); Aufwecken über den Rekalibrier-Button
+  `DEEP_SLEEP_TIMEOUT_MS`); Aufwecken durch Drehen des Encoders (die
+  Rekalibrierung liegt im Menüpunkt **Calibrate**)
 
 Instrumentspezifisches liegt in [`include/Drums.h`](include/Drums.h):
 

@@ -49,11 +49,14 @@ wo das Gerät herkommt.
 - **MIDI-Schalter** — die MIDI-Ausgabe lässt sich im Menü abschalten,
   dann spielt das Gerät unabhängig über den Lautsprecher (Standalone),
   auch bei verbundenem MIDI-Ziel.
-- **Deep Sleep** — nach 10 Minuten ohne Bedienung geht das Gerät in den
-  Tiefschlaf (Display und Funk aus, µA-Bereich) und wacht über den
-  Rekalibrier-Button wieder auf (ext1 auf GPIO14). Der S3 kann Touch-
-  Wakeup nur über einen einzigen Kanal — der Button ist der robustere,
-  tuning-freie Wecker.
+- **Deep Sleep** — nach 5 Minuten ohne Bedienung geht das Gerät in den
+  Tiefschlaf (Display und Funk aus, µA-Bereich) und wacht durch Drehen
+  des Encoders wieder auf (ext1 auf der RTC-fähigen Dreh-Spur GPIO18;
+  der Encoder-Taster GPIO43 ist nicht RTC-fähig und kann Deep Sleep
+  nicht wecken). Beim Einschlafen wird der Ruhepegel gelesen und auf den
+  Gegenpegel geweckt — so weckt jede Drehung unabhängig von der
+  Rasterstellung. Die manuelle Rekalibrierung wanderte dabei vom
+  (unzugänglichen) Board-Button in den Menüpunkt **Calibrate**.
 
 ## Klang & Musikalität (der größte Spielraum)
 
@@ -75,7 +78,8 @@ mit Filter-Hüllkurve) oder Pads/Strings.
 Noten, danach loopt sie der Synth und man spielt darüber; das verwandelt
 das Gerät vom Instrument zur One-Person-Jam. Mit dem Drumkit als
 Grundlage besonders reizvoll: erst einen Beat einspielen, dann die
-Melodie darüber.
+Melodie darüber. Hierzu muss die Ausgabe am Display angepasst werden, 
+eher Richtung Drumm-Computer.
 
 **BLE-MIDI-Empfang** — die umgekehrte Richtung: das BananaPhon als
 Klangerzeuger für einen externen Sequencer. Die Infrastruktur dafür ist
@@ -84,21 +88,24 @@ mit dem Synth komplett da, es fehlt nur die Empfangsseite im
 
 ## Bedienung & Anzeige
 
-**Batterie-Warnung** — die Anzeige ist rein passiv. Unter ~10 % könnte
-das Batterie-Symbol blinken oder der Speaker einen dezenten Warnton
-spielen, bevor der LiPo in die Tiefentladung läuft.
+**Batterie-Warnung** — die Anzeige ist rein passiv. Unter ~5 % könnte
+das Batterie-Symbol blinken, bevor der LiPo in die Tiefentladung läuft.
 
 **Weitere Menüpunkte** — Touch-Schwellen und Velocity-Kennlinie stecken
 noch in der `Config.h`. Sie sind die naheliegendsten Kandidaten fürs
 Menü, sobald das Nachjustieren am Gerät (neues Gemüse, andere
 Umgebung) lästig wird.
 
+**Werkseinstellungen** - Ein Menüpunkt für Werkseinstellungen zum 
+Zurücksetzen des Gerätes wäre hilfreich.
+
 ## Robustheit & Strom
 
 **Watchdog + Fehler-Resilienz** — der Audio-Task und die
 WiFiManager-Schleife laufen unbeaufsichtigt. Ein Task-Watchdog, der bei
 Hängern neu startet, plus ein Boot-Zähler (nach drei Crashs in Folge →
-Speaker aus, nur MIDI) wäre die Bühnen-Versicherung.
+Speaker aus, nur MIDI) wäre die Bühnen-Versicherung. Den Zähler braucht es
+eigentlich nicht.
 
 ## Code & Infrastruktur
 

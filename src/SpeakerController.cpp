@@ -73,7 +73,7 @@ float masterVolume = SPEAKER_MASTER_VOLUME;
 uint8_t activeWaveform = WAVE_CHIP;
 
 // Aktives Instrument (Instrument-Enum aus Drums.h)
-uint8_t activeInstrument = INST_CHIP;
+uint8_t activeInstrument = INST_PIANO;
 
 // 16-Bit-LFSR-Rauschgenerator (NES-Stil) — gemeinsame Quelle für
 // alle Drum-Stimmen

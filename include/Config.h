@@ -292,25 +292,19 @@ constexpr float FX_REVERB_DAMP = 0.5f;
 constexpr float FX_REVERB_WET  = 0.30f;
 
 // ------------------------------------------------
-// Buttons
-// ------------------------------------------------
-
-// Unterer Board-Button (aktiv LOW): manuelle Rekalibrierung aller
-// Sensoren im Betrieb — z. B. nach dem Umstecken auf neues Gemüse.
-// Während der Kalibrierung die Elektroden nicht berühren! Derselbe
-// Button weckt das Gerät auch aus dem Deep Sleep (GPIO14 ist RTC-fähig).
-constexpr uint8_t PIN_BUTTON_RECALIBRATE = 14;
-
-// ------------------------------------------------
 // Deep Sleep (Stromsparen im Akkubetrieb)
 // ------------------------------------------------
 //
 // Nach DEEP_SLEEP_TIMEOUT_MS ohne jede Bedienung (kein Pad berührt oder
-// gehalten, kein Encoder, kein Button) legt sich das Gerät schlafen:
-// Noten verstummen, Display und Funk gehen aus, die Stromaufnahme fällt
-// in den µA-Bereich. Aufwecken über den Rekalibrier-Button (ext1 auf
-// GPIO14); Deep Sleep ist praktisch ein Reset, das Gerät bootet danach
-// normal neu (die Einstellungen liegen im NVS).
+// gehalten, kein Encoder) legt sich das Gerät schlafen: Noten
+// verstummen, Display und Funk gehen aus, die Stromaufnahme fällt in den
+// µA-Bereich. Aufwecken durch Drehen des Encoders: dessen Spur B
+// (PIN_ENCODER_B) liegt auf einem RTC-fähigen Pin und weckt per ext1.
+//
+// Warum nicht der Encoder-Taster? Der S3 kann aus dem Deep Sleep nur
+// über RTC-fähige Pins (GPIO 0–21) aufwachen; PIN_ENCODER_SW (GPIO43)
+// gehört nicht dazu. Der Dreh-Pin B tut es. Deep Sleep ist praktisch
+// ein Reset — das Gerät bootet danach normal neu (Einstellungen im NVS).
 constexpr bool ENABLE_DEEP_SLEEP = true;
 
 constexpr uint32_t DEEP_SLEEP_TIMEOUT_MS = 300000; // 5 Minuten

@@ -91,7 +91,7 @@ static uint32_t readBatteryMilliVolts()
     return analogReadMilliVolts(PIN_BAT_VOLT) * 2;
 }
 
-// Kalibriert alle Sensoren neu (Button oder Start). Beendet vorher
+// Kalibriert alle Sensoren neu (Menüpunkt oder Start). Beendet vorher
 // gehaltene Noten — sonst bliebe in der DAW eine Note hängen, weil der
 // Sensor-Reset das zugehörige Release-Event verschluckt.
 static void recalibrateSensors(bool showUi = true)
@@ -257,7 +257,7 @@ static void updateAftertouch()
 // LOW) weckt per ext1 wieder auf, danach läuft setup() normal neu.
 static void enterDeepSleep()
 {
-    Serial.println("Deep Sleep — Aufwecken per Rekalibrier-Button");
+    Serial.println("Deep Sleep — Aufwecken durch Drehen des Encoders");
 
     Serial.flush();
 
@@ -280,16 +280,23 @@ static void enterDeepSleep()
 
     displayCtrl.powerOff();
 
-    // Rekalibrier-Button (aktiv LOW gegen GND) als Wakeup: RTC-Pullup
-    // halten, damit der Pin im Schlaf sicher HIGH liegt, und über ext1
-    // bei LOW wecken. RTC_PERIPH bleibt dafür versorgt.
-    gpio_num_t wakePin = static_cast<gpio_num_t>(PIN_BUTTON_RECALIBRATE);
+    // Wecken über die Encoder-Spur B (RTC-fähig, ext1). Der Taster
+    // GPIO43 kann den S3 nicht aus dem Deep Sleep wecken (nicht
+    // RTC-fähig), Spur B schon. Um unabhängig von der Rasterstellung zu
+    // wecken, den aktuellen Ruhepegel lesen und auf den GEGENpegel
+    // triggern — so weckt jede Drehung, ohne sofort wieder einzuschlafen.
+    // RTC-Pullup halten (Encoder ruht per Pullup auf HIGH), RTC_PERIPH
+    // dafür versorgt lassen.
+    gpio_num_t wakePin = static_cast<gpio_num_t>(PIN_ENCODER_B);
 
     rtc_gpio_pullup_en(wakePin);
     rtc_gpio_pulldown_dis(wakePin);
 
+    esp_sleep_ext1_wakeup_mode_t mode =
+        digitalRead(PIN_ENCODER_B) == HIGH ? ESP_EXT1_WAKEUP_ANY_LOW : ESP_EXT1_WAKEUP_ANY_HIGH;
+
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-    esp_sleep_enable_ext1_wakeup(1ULL << PIN_BUTTON_RECALIBRATE, ESP_EXT1_WAKEUP_ANY_LOW);
+    esp_sleep_enable_ext1_wakeup(1ULL << PIN_ENCODER_B, mode);
 
     esp_deep_sleep_start();
 }
@@ -301,8 +308,6 @@ static void enterDeepSleep()
 void setup()
 {
     Serial.begin(115200);
-
-    pinMode(PIN_BUTTON_RECALIBRATE, INPUT_PULLUP);
 
     Settings::begin();
 
@@ -392,22 +397,8 @@ void setup()
 
 void loop()
 {
-    // Rekalibrier-Button (aktiv LOW): löst genau einmal pro Tastendruck
-    // aus. Die blockierende Kalibrierung (~1,2 s) wirkt zugleich als
-    // Entprellung — beim Rücksprung hierher ist der Taster längst stabil.
-    static bool buttonWasPressed = false;
-
-    bool buttonPressed = digitalRead(PIN_BUTTON_RECALIBRATE) == LOW;
-
-    if (buttonPressed && !buttonWasPressed)
-    {
-        recalibrateSensors();
-    }
-
-    buttonWasPressed = buttonPressed;
-
-    // Bedienung für den Deep-Sleep-Timer sammeln (Button, Pads, Encoder)
-    bool activity = buttonPressed;
+    // Bedienung für den Deep-Sleep-Timer sammeln (Pads, Encoder)
+    bool activity = false;
 
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
@@ -528,6 +519,13 @@ void loop()
     }
 
     menu.update();
+
+    // Kalibrierung aus dem Menü angefordert (der Board-Button entfällt,
+    // er sitzt unzugänglich im Gehäuse)
+    if (menu.takeCalibrateRequest())
+    {
+        recalibrateSensors();
+    }
 
     // Statuszeile höchstens alle 500 ms prüfen
     if (millis() - lastStatusUpdate > 500)

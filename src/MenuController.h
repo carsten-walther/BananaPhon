@@ -20,6 +20,11 @@ public:
     // Timeout und verzögertes Speichern — aus loop() aufrufen
     void update();
 
+    // Hat der Nutzer im Menü eine Rekalibrierung ausgelöst? Gibt true
+    // genau einmal zurück (Flag wird dabei gelöscht) — main.cpp führt
+    // die eigentliche Kalibrierung aus (sie braucht Sensoren und MIDI).
+    bool takeCalibrateRequest();
+
 private:
     void show();
     void applyVolume(int32_t detents);
@@ -34,4 +39,6 @@ private:
 
     bool _dirty      = false;
     uint32_t _saveAt = 0;
+
+    bool _calibrateRequested = false;
 };

@@ -20,6 +20,7 @@ enum Item : uint8_t
     ITEM_SCALE,
     ITEM_OCTAVE,
     ITEM_MIDI,
+    ITEM_CALIBRATE,
 
     ITEM_COUNT
 };
@@ -67,6 +68,11 @@ void MenuController::show()
 
     case ITEM_MIDI:
         snprintf(text, sizeof(text), "MIDI: %s", Settings::midi() ? "On" : "Off");
+        break;
+
+    case ITEM_CALIBRATE:
+        // Aktion statt Wert: Drehen löst die Kalibrierung aus
+        snprintf(text, sizeof(text), "Calibrate: turn");
         break;
 
     case ITEM_INSTRUMENT:
@@ -265,6 +271,18 @@ void MenuController::handleRotation(int32_t detents)
 
         break;
     }
+
+    case ITEM_CALIBRATE:
+    {
+        // Aktion, kein Wert: Kalibrierung anfordern und das Menü sofort
+        // schließen — main.cpp führt sie aus (übernimmt danach das
+        // Display). Nichts zu speichern, daher kein markDirty()/show().
+        _calibrateRequested = true;
+
+        _open = false;
+
+        return;
+    }
     }
 
     markDirty();
@@ -289,4 +307,13 @@ void MenuController::update()
 
         Serial.println("Einstellungen gespeichert");
     }
+}
+
+bool MenuController::takeCalibrateRequest()
+{
+    bool r = _calibrateRequested;
+
+    _calibrateRequested = false;
+
+    return r;
 }
