@@ -316,6 +316,17 @@ constexpr bool ENABLE_DEEP_SLEEP = true;
 constexpr uint32_t DEEP_SLEEP_TIMEOUT_MS = 300000; // 5 Minuten
 
 // ------------------------------------------------
+// Watchdog & Fehler-Resilienz
+// ------------------------------------------------
+//
+// Der Task-Watchdog (SDK: 5 s Timeout, Reset bei Ablauf, überwacht die
+// CPU0-Idle) wird um zwei Wächter ergänzt: den Audio-Task (fängt ein
+// blockiertes I2S ab, das die Idle-Überwachung nicht sieht) und den
+// Loop-Task (Touch/MIDI/Display/Funk). Hängt einer länger als das
+// Timeout, startet das Gerät neu — die Bühnen-Versicherung.
+constexpr bool ENABLE_WATCHDOG = true;
+
+// ------------------------------------------------
 // Display
 // ------------------------------------------------
 

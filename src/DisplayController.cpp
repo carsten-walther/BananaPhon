@@ -769,15 +769,15 @@ void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, b
     _statusDrawn = true;
 
     // Icon-Leiste horizontal zentriert in der oberen Zeile
-    int32_t iconsX = (display.width() - 5 * ICON_SLOT) / 2;
+    int32_t iconsX = (display.width() - 5 * ICON_SLOT) / 2 + 20;
 
     display.fillRect(iconsX - 2, ICON_Y - 2, 5 * ICON_SLOT + 4, 18, TFT_BLACK);
 
-    drawBleIcon(iconsX + 0 * ICON_SLOT, ICON_Y, ble ? TFT_CYAN : TFT_DARKGREY);
-    drawWifiIcon(iconsX + 1 * ICON_SLOT, ICON_Y, wifi ? TFT_YELLOW : TFT_DARKGREY);
-    drawRtpIcon(iconsX + 2 * ICON_SLOT, ICON_Y, rtp ? TFT_GREEN : TFT_DARKGREY);
-    drawSetupIcon(iconsX + 3 * ICON_SLOT, ICON_Y, portal ? TFT_MAGENTA : TFT_DARKGREY);
-    drawSpeakerIcon(iconsX + 4 * ICON_SLOT, ICON_Y, speaker ? TFT_ORANGE : TFT_DARKGREY);
+    drawBleIcon(iconsX + 0 * ICON_SLOT, ICON_Y, ble ? TFT_WHITE : TFT_DARKGREY);
+    drawWifiIcon(iconsX + 1 * ICON_SLOT, ICON_Y, wifi ? TFT_WHITE : TFT_DARKGREY);
+    drawRtpIcon(iconsX + 2 * ICON_SLOT, ICON_Y, rtp ? TFT_WHITE : TFT_DARKGREY);
+    drawSetupIcon(iconsX + 3 * ICON_SLOT, ICON_Y, portal ? TFT_WHITE : TFT_DARKGREY);
+    drawSpeakerIcon(iconsX + 4 * ICON_SLOT, ICON_Y, speaker ? TFT_WHITE : TFT_DARKGREY);
 }
 
 // Geometrie des OTA-Fortschrittsbalkens (aus der Displaygröße abgeleitet)

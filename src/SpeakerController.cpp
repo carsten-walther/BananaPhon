@@ -1,6 +1,7 @@
 #include "SpeakerController.h"
 
 #include <driver/i2s.h>
+#include <esp_task_wdt.h>
 #include <math.h>
 
 #include "Config.h"
@@ -421,8 +422,22 @@ void audioTask(void*)
 {
     static int16_t buf[FRAMES * 2];
 
+    // Diesen Task vom Watchdog überwachen lassen: Die Idle-Überwachung
+    // auf CPU0 greift nicht, wenn i2s_write() ewig blockiert (totes I2S),
+    // denn dann läuft der Idle-Task ja. Deshalb hier explizit anmelden
+    // und pro Block füttern — hängt die Audio-Kette, startet das Gerät neu.
+    if (ENABLE_WATCHDOG)
+    {
+        esp_task_wdt_add(nullptr);
+    }
+
     for (;;)
     {
+        if (ENABLE_WATCHDOG)
+        {
+            esp_task_wdt_reset();
+        }
+
         // Beim Umschalten des Effekts die Puffer leeren, bevor der
         // Block gerendert wird — sonst bliebe eine alte Fahne stehen
         if (fxReset)

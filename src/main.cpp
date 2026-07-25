@@ -276,7 +276,7 @@ static void enterDeepSleep()
 
     displayCtrl.showSleep();
 
-    delay(1200);
+    delay(2000);
 
     displayCtrl.powerOff();
 
@@ -361,6 +361,15 @@ void setup()
         ota.onStart(
             []
             {
+                // Das Update blockiert den Loop bis zum Neustart —
+                // den Loop-Watchdog so lange abmelden (er schnappt
+                // sonst mitten im Flashen zu). Bei Erfolg bootet das
+                // Gerät ohnehin neu.
+                if (ENABLE_WATCHDOG)
+                {
+                    disableLoopWDT();
+                }
+
                 speaker.allNotesOff();
                 displayCtrl.showOtaScreen("Bitte warten - nicht ausschalten", -1);
             });
@@ -371,7 +380,18 @@ void setup()
         // 0x07E0 = Grün, 0xF800 = Rot
         ota.onEnd([] { displayCtrl.showOtaScreen("Fertig - Neustart ...", -1, 0x07E0); });
 
-        ota.onError([] { displayCtrl.showOtaScreen("Fehler - Abbruch", -1, 0xF800); });
+        ota.onError(
+            []
+            {
+                // Update fehlgeschlagen, kein Neustart — den zuvor
+                // abgemeldeten Loop-Watchdog wieder scharf schalten
+                if (ENABLE_WATCHDOG)
+                {
+                    enableLoopWDT();
+                }
+
+                displayCtrl.showOtaScreen("Fehler - Abbruch", -1, 0xF800);
+            });
 
         ota.begin();
     }
@@ -387,6 +407,13 @@ void setup()
 
     displayCtrl.showBattery(readBatteryMilliVolts());
 
+    // Loop-Task ab jetzt vom Watchdog überwachen — nach dem (langen)
+    // Splash/Init, damit der nicht fälschlich zuschnappt
+    if (ENABLE_WATCHDOG)
+    {
+        enableLoopWDT();
+    }
+
     // Inaktivitäts-Timer erst jetzt starten (nach Splash/Init)
     lastActivity = millis();
 }
@@ -397,6 +424,13 @@ void setup()
 
 void loop()
 {
+    // Loop-Watchdog füttern — hängt der Loop länger als das Timeout
+    // (z. B. in einer Funk-Bibliothek), startet das Gerät neu
+    if (ENABLE_WATCHDOG)
+    {
+        feedLoopWDT();
+    }
+
     // Bedienung für den Deep-Sleep-Timer sammeln (Pads, Encoder)
     bool activity = false;
 

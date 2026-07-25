@@ -63,6 +63,10 @@ wo das Gerät herkommt.
 - **Werkseinstellungen** — Menüpunkt **Factory Reset**: setzt nach einer
   zweistufigen Sicherheits-Rückfrage (zweimal drehen) alle NVS-Werte
   zurück und startet neu.
+- **Watchdog** — der Task-Watchdog überwacht Audio- und Loop-Task und
+  startet das Gerät bei einem Hänger neu (der Audio-Task wird explizit
+  angemeldet, weil ein blockiertes I2S die Idle-Überwachung nicht
+  auslöst; während OTA ist der Loop-Wächter abgemeldet).
 
 ## Klang & Musikalität (der größte Spielraum)
 
@@ -98,14 +102,6 @@ mit dem Synth komplett da, es fehlt nur die Empfangsseite im
 noch in der `Config.h`. Sie sind die naheliegendsten Kandidaten fürs
 Menü, sobald das Nachjustieren am Gerät (neues Gemüse, andere
 Umgebung) lästig wird.
-
-## Robustheit & Strom
-
-**Watchdog + Fehler-Resilienz** — der Audio-Task und die
-WiFiManager-Schleife laufen unbeaufsichtigt. Ein Task-Watchdog, der bei
-Hängern neu startet, plus ein Boot-Zähler (nach drei Crashs in Folge →
-Speaker aus, nur MIDI) wäre die Bühnen-Versicherung. Den Zähler braucht es
-eigentlich nicht.
 
 ## Code & Infrastruktur
 

@@ -108,6 +108,10 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   danach bootet es normal neu (der S3 kann aus dem Deep Sleep nur über
   RTC-fähige Pins aufwachen; der Encoder-Taster GPIO43 gehört nicht
   dazu, die Dreh-Spur auf GPIO18 schon)
+- **Watchdog**: ein Task-Watchdog überwacht den Audio-Task und den Loop;
+  hängt einer länger als das Timeout (z. B. ein totes I2S oder eine
+  klemmende Funk-Bibliothek), startet das Gerät automatisch neu —
+  Bühnen-Versicherung gegen eingefrorene Zustände
 
 ## Hardware
 
@@ -285,6 +289,8 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
   `DISPLAY_TOAST_MS`) und Batterie-Messintervall (`BATTERY_UPDATE_MS`)
 - Batterie-Warnung (`BATTERY_WARN_PERCENT`, Blink-Takt
   `BATTERY_WARN_BLINK_MS`)
+- Watchdog (`ENABLE_WATCHDOG`) — überwacht Audio- und Loop-Task,
+  Neustart bei Hänger
 - Deep Sleep (`ENABLE_DEEP_SLEEP`, Inaktivitäts-Timeout
   `DEEP_SLEEP_TIMEOUT_MS`); Aufwecken durch Drehen des Encoders (die
   Rekalibrierung liegt im Menüpunkt **Calibrate**)
