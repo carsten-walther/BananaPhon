@@ -45,6 +45,37 @@ constexpr uint32_t WIFI_PORTAL_AFTER_MS = 30000;
 #include "Credentials.h"
 
 // ------------------------------------------------
+// OTA (Firmware-Update über WLAN)
+// ------------------------------------------------
+//
+// Zwei Wege, beide brauchen eine bestehende WLAN-Verbindung (die der
+// MIDI-Teil aufbaut — ENABLE_WIFI_MIDI muss also an sein). Die Dienste
+// starten erst, sobald das WLAN verbunden ist.
+//
+//   1. ArduinoOTA — Push aus PlatformIO, wie USB-Flashen, nur kabellos:
+//        pio run -e lilygo-t-display-s3-ota -t upload
+//      Discovery läuft per mDNS (bananaphon.local) über denselben
+//      Responder wie RTP-MIDI.
+//
+//   2. Web-Upload — im Browser (auch vom Handy) eine .bin hochladen:
+//        http://bananaphon.local/    (bzw. die IP des Geräts)
+//      Kein Rechner mit Toolchain nötig — die fertige Firmware liegt
+//      nach `pio run` unter .pio/build/<env>/firmware.bin.
+//
+// Während eines laufenden Updates zeigt das Display einen
+// Fortschrittsbalken; danach startet das Gerät automatisch neu.
+constexpr bool ENABLE_OTA = true;
+
+// Optionaler Schutz für beide Wege: ArduinoOTA-Passwort und HTTP-Basic-
+// Auth der Upload-Seite (Benutzer "admin"). Leer ("") = ohne Schutz —
+// nur im vertrauenswürdigen Heim-WLAN vertretbar. Beim ArduinoOTA-Push
+// mit `upload_flags = --auth=...` in der platformio.ini mitgeben.
+constexpr char OTA_PASSWORD[] = "";
+
+// Port der Web-Upload-Seite
+constexpr uint16_t OTA_WEB_PORT = 80;
+
+// ------------------------------------------------
 // MIDI
 // ------------------------------------------------
 

@@ -731,3 +731,76 @@ void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, b
     drawSetupIcon(iconsX + 3 * ICON_SLOT, ICON_Y, portal ? TFT_MAGENTA : TFT_DARKGREY);
     drawSpeakerIcon(iconsX + 4 * ICON_SLOT, ICON_Y, speaker ? TFT_ORANGE : TFT_DARKGREY);
 }
+
+// Geometrie des OTA-Fortschrittsbalkens (aus der Displaygröße abgeleitet)
+constexpr int32_t OTA_BAR_MARGIN = 20;
+constexpr int32_t OTA_BAR_HEIGHT = 16;
+
+void DisplayController::showOtaScreen(const char* status, int percent, uint16_t color)
+{
+    int32_t w  = display.width();
+    int32_t h  = display.height();
+    int32_t by = h / 2 + 20; // Oberkante des Balkens
+
+    if (percent < 0)
+    {
+        // Screen neu aufbauen (Start, Erfolg oder Fehler)
+        display.fillScreen(TFT_BLACK);
+
+        display.setTextDatum(textdatum_t::middle_center);
+
+        display.setFont(&fonts::DejaVu18);
+
+        display.setTextSize(1);
+
+        display.setTextColor(TFT_YELLOW);
+
+        display.drawString("Firmware-Update", w / 2, h / 2 - 40);
+
+        if (status != nullptr)
+        {
+            display.setFont(&fonts::DejaVu12);
+
+            display.setTextColor(color);
+
+            display.drawString(status, w / 2, h / 2);
+        }
+
+        display.unloadFont();
+
+        // Nach dem Neuaufbau erzwingt der nächste Fortschrittswert das
+        // Zeichnen des Balkens (das übernimmt der OtaController)
+        return;
+    }
+
+    // Fortschrittsbalken: Rahmen, grüne Füllung, Prozenttext darunter
+    int32_t barWidth = w - 2 * OTA_BAR_MARGIN;
+
+    display.drawRect(OTA_BAR_MARGIN, by, barWidth, OTA_BAR_HEIGHT, TFT_WHITE);
+
+    int32_t fill = (barWidth - 4) * percent / 100;
+
+    if (fill > 0)
+    {
+        display.fillRect(OTA_BAR_MARGIN + 2, by + 2, fill, OTA_BAR_HEIGHT - 4, TFT_GREEN);
+    }
+
+    display.setFont(&fonts::DejaVu12);
+
+    display.setTextSize(1);
+
+    display.setTextDatum(textdatum_t::middle_center);
+
+    // Alten Prozenttext überschreiben, dann neu setzen
+    display.fillRect(0, by + OTA_BAR_HEIGHT + 2, w, 16, TFT_BLACK);
+
+    display.setTextColor(TFT_WHITE);
+
+    char label[8];
+
+    snprintf(label, sizeof(label), "%d %%", percent);
+
+    display.drawString(label, w / 2, by + OTA_BAR_HEIGHT + 10);
+
+    display.unloadFont();
+}

@@ -75,6 +75,11 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   erscheint im Audio-MIDI-Setup (macOS) bzw. in [rtpMIDI](https://www.tobias-erichsen.de/software/rtpmidi.html) (Windows)
 - **USB-Host-MIDI** (optional): ein externes MIDI-Gerät kann an den
   ESP32 angeschlossen werden
+- **OTA-Firmware-Update über WLAN**: neue Firmware kabellos einspielen —
+  entweder per PlatformIO-Push (`pio run -e lilygo-t-display-s3-ota -t
+  upload`) oder über eine Upload-Seite im Browser (http://bananaphon.local/,
+  auch vom Handy). Während des Updates zeigt das Display einen
+  Fortschrittsbalken, danach startet das Gerät neu
 - **Splash-Screen** beim Start (mindestens 2 s) mit Gerätename und
   Firmware-Version; Touch-Kalibrierung und Funk-Initialisierung laufen
   währenddessen im Hintergrund
@@ -179,12 +184,44 @@ das Gerät erscheint per Bonjour im Verzeichnis → verbinden.
 **RTP-MIDI (Windows):** [rtpMIDI](https://www.tobias-erichsen.de/software/rtpmidi.html)
 installieren, das Gerät erscheint im Verzeichnis.
 
+## Firmware-Update über WLAN (OTA)
+
+Ist das Gerät im WLAN, lässt sich neue Firmware kabellos einspielen —
+kein USB-Kabel, kein Aufschrauben. Zwei Wege, beide über `ENABLE_OTA`
+in `Config.h` geschaltet und optional mit `OTA_PASSWORD` geschützt:
+
+**1. Push aus PlatformIO** (für die Entwicklung, wie USB-Flashen):
+
+```sh
+pio run -e lilygo-t-display-s3-ota -t upload
+```
+
+Die OTA-Umgebung erbt alles von der Standard-Umgebung und ersetzt nur
+den Upload-Weg (`upload_protocol = espota`, `upload_port =
+bananaphon.local`). Statt des mDNS-Namens kann auch die IP des Geräts
+stehen. Ist `OTA_PASSWORD` gesetzt, in der `platformio.ini` die Zeile
+`upload_flags = --auth=…` einkommentieren.
+
+**2. Upload-Seite im Browser** (kein Rechner mit Toolchain nötig):
+
+http://bananaphon.local/ öffnen (auch vom Handy), die fertige
+`.pio/build/lilygo-t-display-s3/firmware.bin` auswählen und hochladen.
+
+In beiden Fällen zeigt das Display einen Fortschrittsbalken, der Ton
+verstummt währenddessen, und das Gerät startet nach dem Update
+automatisch in die neue Firmware. Schlägt das Update fehl, bleibt die
+alte Firmware in der zweiten Partition erhalten (die Board-Standard-
+Partitionierung `default_16MB` hält zwei App-Slots bereit).
+
 ## Konfiguration
 
 Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
 
 - Transports einzeln schaltbar (`ENABLE_BLE_MIDI`, `ENABLE_WIFI_MIDI`,
   `ENABLE_USB_MIDI`)
+- OTA-Firmware-Update (`ENABLE_OTA`, optionaler Schutz `OTA_PASSWORD`
+  für beide Wege, Port der Upload-Seite `OTA_WEB_PORT`) — braucht eine
+  WLAN-Verbindung, also `ENABLE_WIFI_MIDI`
 - Gerätename, MIDI-Kanal, Velocity
 - Anschlagsdynamik (`ENABLE_TOUCH_VELOCITY`, Spanne `VELOCITY_MIN` /
   `VELOCITY_MAX`, Kennlinie `TOUCH_VELOCITY_RATIO_MAX`, Peak-Fenster
@@ -254,6 +291,7 @@ include/Drums.h             Instrumente, Drumkit-Rezepte, FM-Piano-Parameter
 src/main.cpp                Verdrahtung: Touch → MIDI + Display
 src/TouchSensor.*           Touch-Logik (ESP32-S3, Baseline + Hysterese)
 src/MidiController.*        MIDI-Transports (BLE, RTP, USB-Host)
+src/OtaController.*         OTA-Update (ArduinoOTA-Push + Web-Upload)
 src/SpeakerController.*     Standalone-Synth über I2S (MAX98357A)
 src/EncoderController.*     Rotary-Encoder (PCNT-Quadraturzähler)
 src/MenuController.*        Settings-Menü (Encoder-Bedienung)

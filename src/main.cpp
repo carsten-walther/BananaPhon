@@ -6,6 +6,7 @@
 #include "EncoderController.h"
 #include "MenuController.h"
 #include "MidiController.h"
+#include "OtaController.h"
 #include "Scales.h"
 #include "Drums.h"
 #include "Settings.h"
@@ -22,6 +23,8 @@ SpeakerController speaker;
 EncoderController encoder;
 
 MenuController menu;
+
+OtaController ota;
 
 // Tatsächlich gespielte Note pro Pad (inkl. Oktav-Shift) — das
 // NoteOff muss exakt dieselbe Note treffen, auch wenn die Oktave
@@ -285,6 +288,31 @@ void setup()
 
     menu.begin(&speaker, &displayCtrl);
 
+    // OTA: Während eines Updates den Ton stoppen und den Fortschritt
+    // auf dem Display zeigen. Die Callbacks laufen im (blockierenden)
+    // Update-Kontext, nicht aus loop() — nur von dort ist der Verlauf
+    // sichtbar. Die eigentlichen Dienste startet ota.update() erst,
+    // sobald das WLAN verbunden ist.
+    if (ENABLE_OTA)
+    {
+        ota.onStart(
+            []
+            {
+                speaker.allNotesOff();
+                displayCtrl.showOtaScreen("Bitte warten - nicht ausschalten", -1);
+            });
+
+        ota.onProgress([](uint8_t percent) { displayCtrl.showOtaScreen(nullptr, percent); });
+
+        // RGB565 direkt (die TFT_*-Makros gehören dem DisplayController):
+        // 0x07E0 = Grün, 0xF800 = Rot
+        ota.onEnd([] { displayCtrl.showOtaScreen("Fertig - Neustart ...", -1, 0x07E0); });
+
+        ota.onError([] { displayCtrl.showOtaScreen("Fehler - Abbruch", -1, 0xF800); });
+
+        ota.begin();
+    }
+
     // Splash mindestens SPLASH_MS stehen lassen, dann die normale
     // Oberfläche aufbauen
     while (millis() - splashStart < SPLASH_MS)
@@ -369,6 +397,14 @@ void loop()
     }
 
     midi.update();
+
+    // OTA: Dienste bei WLAN-Verbindung starten und beide Update-Wege
+    // bedienen. Läuft ein Update, blockiert dieser Aufruf bis zum
+    // Neustart — Ton und Anzeige übernehmen die OTA-Callbacks.
+    if (ENABLE_OTA)
+    {
+        ota.update();
+    }
 
     // Aftertouch: Druck gehaltener Noten in Modulation übersetzen —
     // getaktet, nicht bei jedem Durchlauf (siehe Config.h)

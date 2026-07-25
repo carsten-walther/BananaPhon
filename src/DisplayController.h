@@ -59,6 +59,12 @@ public:
     // verrechnet). Werte über ~4,4 V bedeuten USB-Versorgung.
     void showBattery(uint32_t milliVolts);
 
+    // Vollbild-Anzeige während eines OTA-Firmware-Updates. percent < 0
+    // baut den Screen neu auf (Titel + Statuszeile, kein Balken);
+    // percent >= 0 aktualisiert nur den Fortschrittsbalken. `color`
+    // färbt die Statuszeile (z. B. Rot bei Fehler, Grün bei Erfolg).
+    void showOtaScreen(const char* status, int percent, uint16_t color = 0xFFFF);
+
 private:
     bool _lastBle     = false;
     bool _lastWifi    = false;
