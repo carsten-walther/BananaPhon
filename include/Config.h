@@ -267,6 +267,31 @@ constexpr uint32_t SPEAKER_ATTACK_MS  = 5;
 constexpr uint32_t SPEAKER_RELEASE_MS = 40;
 
 // ------------------------------------------------
+// Effekte (Standalone-Synth)
+// ------------------------------------------------
+//
+// Ein globaler Effekt auf die Mix-Summe, im Menü umschaltbar
+// (Off/Delay/Reverb); die Auswahl liegt im NVS-Flash. Beide Effekte
+// laufen im Audio-Task auf Core 0 und kosten nur RAM für die Puffer.
+// Die Effekt-Puffer sind auf die Abtastrate ausgelegt und ratenunabhängig.
+
+// Delay/Echo: eine Rückkopplungs-Delay-Line. Verzögerungszeit,
+// Feedback (0..<1, bestimmt die Zahl hörbarer Wiederholungen) und
+// Wet-Anteil. Der Puffer belegt FX_DELAY_MS * Abtastrate Floats
+// (bei 250 ms und 32 kHz: 8000 Werte = 32 KB).
+constexpr uint32_t FX_DELAY_MS    = 250;
+constexpr float FX_DELAY_FEEDBACK = 0.40f;
+constexpr float FX_DELAY_WET      = 0.35f;
+
+// Reverb (Freeverb-artig: 8 Kamm- + 4 Allpassfilter). Raumgröße
+// (0..1 → Nachhallzeit, bei 0.5 rund 1,1 s), Dämpfung der Höhen im
+// Nachhall (0..1) und Wet-Anteil. Die Filterlängen sind die
+// klassische Freeverb-Stimmung, auf die Abtastrate skaliert.
+constexpr float FX_REVERB_ROOM = 0.5f;
+constexpr float FX_REVERB_DAMP = 0.5f;
+constexpr float FX_REVERB_WET  = 0.30f;
+
+// ------------------------------------------------
 // Buttons
 // ------------------------------------------------
 

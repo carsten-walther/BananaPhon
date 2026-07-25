@@ -14,6 +14,16 @@ enum Waveform : uint8_t
     WAVE_COUNT
 };
 
+// Effekt auf die Mix-Summe (im Menü umschaltbar)
+enum FxMode : uint8_t
+{
+    FX_OFF = 0,
+    FX_DELAY,  // Rückkopplungs-Delay (Echo)
+    FX_REVERB, // Freeverb-artiger Hall
+
+    FX_COUNT
+};
+
 // Polyphoner Standalone-Synth über I2S (MAX98357A): eine
 // Dreieck-Stimme pro Pad, Velocity steuert die Lautstärke.
 // Gleiche Schnittstelle wie der MidiController — main.cpp
@@ -51,4 +61,9 @@ public:
     // Instrument (Instrument-Enum aus Drums.h)
     void setInstrument(uint8_t instrument);
     uint8_t instrument();
+
+    // Effekt auf die Mix-Summe (FxMode-Enum); Umschalten leert die
+    // Effekt-Puffer, damit keine alte Fahne stehen bleibt
+    void setFx(uint8_t mode);
+    uint8_t fx();
 };

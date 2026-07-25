@@ -154,6 +154,159 @@ float pianoRelease    = 1.0f;
 float pianoIndexDecay = 1.0f;
 float drumChokeDecay  = 1.0f;
 
+// ------------------------------------------------
+// Effekte (global auf die Mix-Summe, siehe Config.h)
+// ------------------------------------------------
+
+// Aktiver Effekt (FxMode); 8-Bit-Zugriff ist atomar. fxReset bittet
+// den Audio-Task, die Puffer beim nächsten Block zu leeren — so bleibt
+// beim Umschalten keine alte Fahne stehen.
+uint8_t activeFx      = FX_OFF;
+volatile bool fxReset = false;
+
+// --- Reverb: Freeverb-lite (8 Kamm- + 4 Allpassfilter) ---
+// Die Filterlängen sind Freeverbs klassische Stimmung (bei 44,1 kHz),
+// auf die eigene Abtastrate skaliert.
+constexpr int rvScale(int n)
+{
+    return n * static_cast<int>(SPEAKER_SAMPLE_RATE) / 44100;
+}
+
+constexpr int RV_NCOMB = 8;
+constexpr int RV_NAP   = 4;
+
+constexpr int rvCombTune[RV_NCOMB] = {1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617};
+constexpr int rvApTune[RV_NAP]     = {556, 441, 341, 225};
+
+constexpr int RV_COMB_MAX = rvScale(1617) + 1;
+constexpr int RV_AP_MAX   = rvScale(556) + 1;
+
+// Standard-Freeverb-Skalierung der Config-Parameter
+constexpr float rvFeedback = FX_REVERB_ROOM * 0.28f + 0.7f;
+constexpr float rvDamp     = FX_REVERB_DAMP * 0.4f;
+
+// Eingangsdämpfung, damit die acht rückgekoppelten Kämme nicht
+// übersteuern (klassischer Freeverb-Wert)
+constexpr float RV_INPUT_GAIN = 0.015f;
+
+// --- Delay: eine Rückkopplungs-Delay-Line ---
+// Pufferlänge = Verzögerungszeit: der Leseindex ist der Schreibindex
+// (der Wert dort ist genau DELAY_SAMPLES Samples alt, bevor er
+// überschrieben wird).
+constexpr int DELAY_SAMPLES = static_cast<int>(FX_DELAY_MS * SPEAKER_SAMPLE_RATE / 1000);
+
+// Delay und Reverb sind nie gleichzeitig aktiv (ein Effekt zur Zeit),
+// deshalb teilen sich ihre großen Puffer denselben Speicher — das
+// spart den kleineren Effekt komplett. Beim Umschalten leert der
+// Audio-Task die Puffer (fxReset), ein Übersprechen ist ausgeschlossen.
+union FxPool
+{
+    float delay[DELAY_SAMPLES];
+
+    struct
+    {
+        float comb[RV_NCOMB][RV_COMB_MAX];
+        float ap[RV_NAP][RV_AP_MAX];
+    } rv;
+};
+
+FxPool fxPool;
+
+int delayIdx = 0;
+
+int rvCombLen[RV_NCOMB];
+int rvCombIdx[RV_NCOMB];
+float rvCombStore[RV_NCOMB]; // Tiefpass-Zustand (Dämpfung) je Kamm
+
+int rvApLen[RV_NAP];
+int rvApIdx[RV_NAP];
+
+inline float applyDelay(float in)
+{
+    float d                = fxPool.delay[delayIdx];
+    fxPool.delay[delayIdx] = in + d * FX_DELAY_FEEDBACK;
+
+    if (++delayIdx >= DELAY_SAMPLES)
+    {
+        delayIdx = 0;
+    }
+
+    return in + d * FX_DELAY_WET;
+}
+
+inline float applyReverb(float in)
+{
+    float input = in * RV_INPUT_GAIN;
+    float out   = 0.0f;
+
+    // Parallele Kammfilter mit Höhendämpfung im Rückkopplungszweig
+    for (int i = 0; i < RV_NCOMB; i++)
+    {
+        float y                         = fxPool.rv.comb[i][rvCombIdx[i]];
+        rvCombStore[i]                  = y * (1.0f - rvDamp) + rvCombStore[i] * rvDamp;
+        fxPool.rv.comb[i][rvCombIdx[i]] = input + rvCombStore[i] * rvFeedback;
+
+        if (++rvCombIdx[i] >= rvCombLen[i])
+        {
+            rvCombIdx[i] = 0;
+        }
+
+        out += y;
+    }
+
+    // In Reihe geschaltete Allpässe streuen die Echos zu einer
+    // diffusen Fahne (Feedback fest 0.5)
+    for (int i = 0; i < RV_NAP; i++)
+    {
+        float bufout                = fxPool.rv.ap[i][rvApIdx[i]];
+        float y                     = -out + bufout;
+        fxPool.rv.ap[i][rvApIdx[i]] = out + bufout * 0.5f;
+
+        if (++rvApIdx[i] >= rvApLen[i])
+        {
+            rvApIdx[i] = 0;
+        }
+
+        out = y;
+    }
+
+    return in + out * FX_REVERB_WET;
+}
+
+// Leert die geteilten Effekt-Puffer und alle Filterzustände (Aufruf
+// aus dem Audio-Task bei fxReset). Nullt den kompletten Union-Speicher
+// über beide Sichten — nach dem Umschalten startet der Effekt sauber.
+void fxClearBuffers()
+{
+    delayIdx = 0;
+
+    for (int i = 0; i < DELAY_SAMPLES; i++)
+    {
+        fxPool.delay[i] = 0.0f;
+    }
+
+    for (int i = 0; i < RV_NCOMB; i++)
+    {
+        rvCombIdx[i]   = 0;
+        rvCombStore[i] = 0.0f;
+
+        for (int j = 0; j < RV_COMB_MAX; j++)
+        {
+            fxPool.rv.comb[i][j] = 0.0f;
+        }
+    }
+
+    for (int i = 0; i < RV_NAP; i++)
+    {
+        rvApIdx[i] = 0;
+
+        for (int j = 0; j < RV_AP_MAX; j++)
+        {
+            fxPool.rv.ap[i][j] = 0.0f;
+        }
+    }
+}
+
 // Schlägt die Drum-Stimme für Pad d an. Wird aus noteOn (Loop-Task)
 // gerufen — und aus dem Audio-Task für verzögerte Retrigger, nachdem
 // die alte Schwingung ausgeblendet ist (siehe Voice::retrigVel).
@@ -270,6 +423,15 @@ void audioTask(void*)
 
     for (;;)
     {
+        // Beim Umschalten des Effekts die Puffer leeren, bevor der
+        // Block gerendert wird — sonst bliebe eine alte Fahne stehen
+        if (fxReset)
+        {
+            fxClearBuffers();
+
+            fxReset = false;
+        }
+
         for (int f = 0; f < FRAMES; f++)
         {
             float mix = 0.0f;
@@ -488,6 +650,17 @@ void audioTask(void*)
                 mix * masterVolume /
                 ((activeInstrument == INST_DRUMS ? DRUM_HEADROOM : MELODY_HEADROOM) * 32768.0f);
 
+            // Effekt auf die Mix-Summe (vor der Sättigung, damit die
+            // nasse Fahne dieselbe Begrenzung bekommt wie das Direktsignal)
+            if (activeFx == FX_DELAY)
+            {
+                x = applyDelay(x);
+            }
+            else if (activeFx == FX_REVERB)
+            {
+                x = applyReverb(x);
+            }
+
             // Weiche Sättigung: Spitzen werden gerundet statt hart
             // abgeschnitten. Bei Drums macht das zugleich den Druck,
             // den die Ausgangsstufe eines Drumcomputers erzeugt.
@@ -547,6 +720,18 @@ void SpeakerController::begin()
     drumChokeDecay  = decayPerSample(DRUM_CHOKE_MS);
 
     arpFadePerSample = 1000.0f / (ARP_FADE_MS * SPEAKER_SAMPLE_RATE);
+
+    // Reverb-Filterlängen aus der auf die Abtastrate skalierten
+    // Freeverb-Stimmung (die Puffer selbst sind static und schon 0)
+    for (int i = 0; i < RV_NCOMB; i++)
+    {
+        rvCombLen[i] = rvScale(rvCombTune[i]);
+    }
+
+    for (int i = 0; i < RV_NAP; i++)
+    {
+        rvApLen[i] = rvScale(rvApTune[i]);
+    }
 
     for (int i = 0; i < 1024; i++)
     {
@@ -812,4 +997,26 @@ void SpeakerController::setInstrument(uint8_t instrument)
 uint8_t SpeakerController::instrument()
 {
     return activeInstrument;
+}
+
+void SpeakerController::setFx(uint8_t mode)
+{
+    if (mode >= FX_COUNT)
+    {
+        mode = FX_OFF;
+    }
+
+    if (mode != activeFx)
+    {
+        activeFx = mode;
+
+        // Puffer beim nächsten Block leeren (im Audio-Task), damit die
+        // alte Fahne nicht in den neuen Effekt hineinklingt
+        fxReset = true;
+    }
+}
+
+uint8_t SpeakerController::fx()
+{
+    return activeFx;
 }

@@ -32,4 +32,8 @@ void setOctave(int8_t octave);
 // verbunden ist. Umschaltbar im Menü.
 bool midi();
 void setMidi(bool enabled);
+
+// Effekt am Lautsprecher (FxMode-Enum: Off/Delay/Reverb)
+uint8_t fx();
+void setFx(uint8_t fx);
 } // namespace Settings

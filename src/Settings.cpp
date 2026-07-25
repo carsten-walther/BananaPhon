@@ -17,7 +17,8 @@ uint8_t sc   = SCALE_MAJOR;
 uint8_t arpM = 0;
 uint8_t inst = INST_CHIP;
 int8_t oct   = 0;
-bool midiOn  = true; // MIDI-Ausgabe standardmäßig an
+bool midiOn  = true;   // MIDI-Ausgabe standardmäßig an
+uint8_t fxM  = FX_OFF; // Effekt am Lautsprecher, standardmäßig aus
 } // namespace
 
 void Settings::begin()
@@ -31,6 +32,7 @@ void Settings::begin()
     inst   = prefs.getUChar("inst", INST_CHIP);
     oct    = prefs.getChar("oct", 0);
     midiOn = prefs.getBool("midi", true);
+    fxM    = prefs.getUChar("fx", FX_OFF);
 
     // Gegen ungültige Altbestände absichern (z. B. nach Firmware-Wechsel)
     if (vol < 0.0f || vol > 1.0f)
@@ -62,6 +64,11 @@ void Settings::begin()
     {
         oct = 0;
     }
+
+    if (fxM >= FX_COUNT)
+    {
+        fxM = FX_OFF;
+    }
 }
 
 void Settings::save()
@@ -73,6 +80,7 @@ void Settings::save()
     prefs.putUChar("inst", inst);
     prefs.putChar("oct", oct);
     prefs.putBool("midi", midiOn);
+    prefs.putUChar("fx", fxM);
 }
 
 float Settings::volume()
@@ -143,4 +151,14 @@ bool Settings::midi()
 void Settings::setMidi(bool enabled)
 {
     midiOn = enabled;
+}
+
+uint8_t Settings::fx()
+{
+    return fxM;
+}
+
+void Settings::setFx(uint8_t fx)
+{
+    fxM = fx;
 }

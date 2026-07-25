@@ -65,7 +65,8 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   **Sound** (Chip/Drums/Piano), **Wellenform**
   (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Arpeggio**
   (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
-  schnelle Notenfolge zerlegt), **Skala** (Dur, Moll,
+  schnelle Notenfolge zerlegt), **FX** (Off/Delay/Reverb —
+  Echo bzw. Freeverb-Hall auf die Lautsprecher-Summe), **Skala** (Dur, Moll,
   Pentatonik, Blues), **Oktave** (±2) und **MIDI** (On/Off —
   schaltet die MIDI-Ausgabe ab und spielt nur noch über den
   Lautsprecher), Drehen
@@ -258,6 +259,10 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
 - Rotary-Encoder (`ENABLE_ENCODER`, Pins, `ENCODER_STEPS_PER_DETENT`,
   `ENCODER_VOLUME_STEP`)
 - Arpeggio-Stufen (`ARP_STEP_MS`)
+- Effekte am Lautsprecher (im Menü umschaltbar Off/Delay/Reverb):
+  Delay-Zeit/Feedback/Wet (`FX_DELAY_MS`, `FX_DELAY_FEEDBACK`,
+  `FX_DELAY_WET`) und Reverb-Raumgröße/Dämpfung/Wet (`FX_REVERB_ROOM`,
+  `FX_REVERB_DAMP`, `FX_REVERB_WET`)
 - Splash-Screen (`SPLASH_MS`) und Firmware-Version (`FIRMWARE_VERSION`)
 - Settings-Menü (`MENU_TIMEOUT_MS`, Oktavbereich `OCTAVE_RANGE`);
   die Defaults für Lautstärke/Wellenform gelten bis zur ersten

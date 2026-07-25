@@ -38,6 +38,17 @@ wo das Gerät herkommt.
   den MIDI-Bus frei.
 - **Splash-Screen** — Name + Firmware-Version beim Start, Kalibrierung
   und Funk-Initialisierung laufen währenddessen im Hintergrund.
+- **Hall/Delay am Speaker** — ein globaler Effekt auf die Mix-Summe,
+  im Menü umschaltbar (Off/Delay/Reverb): eine Rückkopplungs-Delay-Line
+  (Echo) und ein Freeverb-artiger Hall (8 Kamm- + 4 Allpassfilter).
+  Delay und Reverb teilen sich denselben Pufferspeicher (nie
+  gleichzeitig aktiv). Auswahl im NVS. Parameter in `Config.h`.
+- **OTA-Update** — neue Firmware kabellos über WLAN: ArduinoOTA-Push
+  aus PlatformIO oder Upload-Seite im Browser. Fortschritt auf dem
+  Display, Fallback auf die alte Partition bei Fehlern.
+- **MIDI-Schalter** — die MIDI-Ausgabe lässt sich im Menü abschalten,
+  dann spielt das Gerät unabhängig über den Lautsprecher (Standalone),
+  auch bei verbundenem MIDI-Ziel.
 
 ## Klang & Musikalität (der größte Spielraum)
 
@@ -47,66 +58,11 @@ Tiefe am Druck hängt, oder Pitch-Bend direkt aus dem Druckwert. Beim
 Speaker ein Multiplikator auf den Phasenschritt, bei MIDI ein echtes
 Pitch-Bend-Event.
 
-**Hall/Delay am Speaker** — eine simple Delay-Line würde besonders den
-Chip-Wellenformen die Piepser-Anmutung nehmen. Kostet nur RAM für den
-Buffer; das Piano zeigt schon, wie viel ein längerer Ausklang bringt.
-
 **Weitere Instrumente** — die Instrument-Weiche (`Instrument`-Enum in
 `include/Drums.h`, Umschaltung über `SpeakerController::setInstrument`)
 trägt inzwischen drei Klangerzeuger. Neue kommen hinten ans Enum, damit
 gespeicherte NVS-Werte gültig bleiben. Naheliegend: ein Bass (Sägezahn
 mit Filter-Hüllkurve) oder Pads/Strings.
-
-### Die Bleistift-Idee
-
-Sie hat zwei Ausbaustufen, eine die sofort funktioniert und eine richtig
-spannende.
-
-**Stufe 1** (funktioniert heute schon): Bleistiftstriche sind leitfähig
-genug für die kapazitive Messung. Man kann sich also jetzt schon eine
-Klaviatur aufs Papier zeichnen und die Krokodilklemmen an die
-Strichenden klemmen — fertig. Der Strich wirkt als
-Elektrodenverlängerung, die Baseline-Kalibrierung frisst den
-Graphit-Offset, und sogar die Anschlagsdynamik funktioniert (mehr
-Fingerfläche auf dem Strich = höhere Velocity). Wichtig nur: satte,
-mehrfach nachgezogene Striche mit weichem Bleistift (B2 oder weicher),
-denn dünne HB-Striche haben Megaohm-Widerstände und koppeln schwach. Das
-wäre übrigens ein fantastisches README-Foto: gezeichnete Klaviatur statt
-Gemüse.
-
-**Stufe 2** (der Ribbon-Controller): Widerstand messen und daraus Töne
-modulieren. Physikalisch steckt da ein echtes Instrument drin — ein
-langer, dicker Graphitstrich ist ein verteilter Widerstand (grob
-50 kΩ–1 MΩ pro cm, je nach Härte und Deckung). Beschaltung im
-Makey-Makey-Stil: Strichende über einen ~1-MΩ-Pullup an 3,3 V und an
-einen ADC-Pin, der Spieler hält eine GND-Elektrode in der anderen Hand
-und berührt den Strich irgendwo — der ADC sieht einen Spannungsteiler
-aus Strichsegment + Körperwiderstand. Je weiter vom Clip entfernt
-berührt wird, desto höher der Widerstand: ein kontinuierlicher
-Positionswert, ein gezeichnetes Ribbon.
-
-Zwei ehrliche Einschränkungen bestimmen das Design. Erstens schwankt der
-Hautwiderstand massiv (trockene vs. feuchte Finger: Faktor 10) — der
-Absolutwert taugt daher nicht für präzise Tonhöhen, aber hervorragend
-für relative Modulation: den Finger auf dem Strich schieben →
-Pitch-Bend, Vibrato-Tiefe oder Filter. Genau da glänzt es, ein „Slide"
-klingt auf dem Chiptune-Synth herrlich. Alternativ grob quantisiert in
-3–5 Zonen (mit Kalibrier-Geste), das ist robust.
-
-Zweitens die Pin-Frage, und die hat einen Haken: Alle Pins sind belegt,
-und von den Touch-Pins sind nur GPIO 1, 2, 3 und 10 ADC1-fähig —
-GPIO 11–13 hängen an ADC2, der sich mit aktivem WLAN beißt. Der saubere
-Weg wäre also: ein Pad opfern (z. B. GPIO 10), `NUM_SENSORS` auf 6, und
-dieser Pin wird per Config umschaltbar zum Ribbon-Eingang — sechs
-gezeichnete Tasten plus ein gezeichneter Pitch-Bend-Streifen darüber.
-Softwareseitig ein kleiner `RibbonController`: ADC oversampled,
-Median-Filter, Touch-Erkennung über Schwelle, Wert auf Bend/Vibrato
-gemappt — beim Speaker als Multiplikator auf den Phasenschritt, bei MIDI
-als echtes Pitch-Bend-Event.
-
-Zu bedenken: `NUM_SENSORS` steckt auch in `scaleIntervals`, `drumNotes`,
-`drumLabels` und `drumSpecs` — die Tabellen müssten mitwandern oder auf
-eine feste Länge von 7 entkoppelt werden.
 
 ### Weitere Kandidaten
 

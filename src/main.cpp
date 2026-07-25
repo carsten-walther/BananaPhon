@@ -287,6 +287,8 @@ void setup()
 
     speaker.setInstrument(Settings::instrument());
 
+    speaker.setFx(Settings::fx());
+
     encoder.begin();
 
     menu.begin(&speaker, &displayCtrl);

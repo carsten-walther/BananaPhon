@@ -16,6 +16,7 @@ enum Item : uint8_t
     ITEM_INSTRUMENT = 0,
     ITEM_WAVEFORM,
     ITEM_ARP,
+    ITEM_FX,
     ITEM_SCALE,
     ITEM_OCTAVE,
     ITEM_MIDI,
@@ -27,6 +28,8 @@ enum Item : uint8_t
 const char* waveformNames[WAVE_COUNT] = {"Triangle", "Rectangle", "Saw", "Sine", "8-Bit"};
 
 const char* arpNames[ARP_MODE_COUNT] = {"Off", "Slow", "Fast", "Turbo"};
+
+const char* fxNames[FX_COUNT] = {"Off", "Delay", "Reverb"};
 } // namespace
 
 void MenuController::begin(SpeakerController* speaker, DisplayController* display)
@@ -48,6 +51,10 @@ void MenuController::show()
 
     case ITEM_ARP:
         snprintf(text, sizeof(text), "Arp: %s", arpNames[Settings::arp()]);
+        break;
+
+    case ITEM_FX:
+        snprintf(text, sizeof(text), "FX: %s", fxNames[Settings::fx()]);
         break;
 
     case ITEM_SCALE:
@@ -185,6 +192,22 @@ void MenuController::handleRotation(int32_t detents)
         Settings::setArp(static_cast<uint8_t>(am));
 
         _speaker->setArp(static_cast<uint8_t>(am));
+
+        break;
+    }
+
+    case ITEM_FX:
+    {
+        int32_t fx = (Settings::fx() + detents) % FX_COUNT;
+
+        if (fx < 0)
+        {
+            fx += FX_COUNT;
+        }
+
+        Settings::setFx(static_cast<uint8_t>(fx));
+
+        _speaker->setFx(static_cast<uint8_t>(fx));
 
         break;
     }
