@@ -17,18 +17,20 @@ uint8_t sc   = SCALE_MAJOR;
 uint8_t arpM = 0;
 uint8_t inst = INST_CHIP;
 int8_t oct   = 0;
+bool midiOn  = true; // MIDI-Ausgabe standardmäßig an
 } // namespace
 
 void Settings::begin()
 {
     prefs.begin("bananaphon", false);
 
-    vol  = prefs.getFloat("vol", SPEAKER_MASTER_VOLUME);
-    wf   = prefs.getUChar("wave", WAVE_TRIANGLE);
-    sc   = prefs.getUChar("scale", SCALE_MAJOR);
-    arpM = prefs.getUChar("arp", 0);
-    inst = prefs.getUChar("inst", INST_CHIP);
-    oct  = prefs.getChar("oct", 0);
+    vol    = prefs.getFloat("vol", SPEAKER_MASTER_VOLUME);
+    wf     = prefs.getUChar("wave", WAVE_TRIANGLE);
+    sc     = prefs.getUChar("scale", SCALE_MAJOR);
+    arpM   = prefs.getUChar("arp", 0);
+    inst   = prefs.getUChar("inst", INST_CHIP);
+    oct    = prefs.getChar("oct", 0);
+    midiOn = prefs.getBool("midi", true);
 
     // Gegen ungültige Altbestände absichern (z. B. nach Firmware-Wechsel)
     if (vol < 0.0f || vol > 1.0f)
@@ -70,6 +72,7 @@ void Settings::save()
     prefs.putUChar("arp", arpM);
     prefs.putUChar("inst", inst);
     prefs.putChar("oct", oct);
+    prefs.putBool("midi", midiOn);
 }
 
 float Settings::volume()
@@ -130,4 +133,14 @@ int8_t Settings::octave()
 void Settings::setOctave(int8_t octave)
 {
     oct = octave;
+}
+
+bool Settings::midi()
+{
+    return midiOn;
+}
+
+void Settings::setMidi(bool enabled)
+{
+    midiOn = enabled;
 }

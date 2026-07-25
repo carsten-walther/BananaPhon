@@ -26,4 +26,10 @@ void setInstrument(uint8_t instrument);
 
 int8_t octave();
 void setOctave(int8_t octave);
+
+// MIDI-Ausgabe aktiv? Ist sie aus, spielt das BananaPhon unabhängig
+// über den Lautsprecher (Standalone), auch wenn ein MIDI-Ziel
+// verbunden ist. Umschaltbar im Menü.
+bool midi();
+void setMidi(bool enabled);
 } // namespace Settings

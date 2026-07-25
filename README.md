@@ -55,7 +55,10 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   MIDI-Ziel spielt ein I2S-Verstärker (MAX98357A) die Noten direkt —
   polyphon mit einer Stimme pro Pad, Wellenform wählbar (Default:
   8-Bit-Chiptune), Velocity steuert die Lautstärke; Lautsprecher-Icon
-  in der Statusleiste zeigt den Modus
+  in der Statusleiste zeigt den Modus. Über den Menüpunkt **MIDI:
+  On/Off** lässt sich der Standalone-Betrieb auch bei verbundenem
+  MIDI-Ziel erzwingen — das BananaPhon wird so zum eigenständigen
+  Instrument
 - **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
   PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
   Menü (auf dem zuletzt benutzten Parameter) und wechselt zwischen
@@ -63,7 +66,9 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Arpeggio**
   (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
   schnelle Notenfolge zerlegt), **Skala** (Dur, Moll,
-  Pentatonik, Blues) und **Oktave** (±2), Drehen
+  Pentatonik, Blues), **Oktave** (±2) und **MIDI** (On/Off —
+  schaltet die MIDI-Ausgabe ab und spielt nur noch über den
+  Lautsprecher), Drehen
   ändert den Wert; die Lautstärke regelt Drehen bei
   geschlossenem Menü direkt (Schnellzugriff). Alle Werte landen im NVS-Flash und überleben
   Neustarts — konfigurieren statt kompilieren

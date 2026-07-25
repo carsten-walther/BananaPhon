@@ -18,6 +18,7 @@ enum Item : uint8_t
     ITEM_ARP,
     ITEM_SCALE,
     ITEM_OCTAVE,
+    ITEM_MIDI,
 
     ITEM_COUNT
 };
@@ -55,6 +56,10 @@ void MenuController::show()
 
     case ITEM_OCTAVE:
         snprintf(text, sizeof(text), "Octave: %+d", Settings::octave());
+        break;
+
+    case ITEM_MIDI:
+        snprintf(text, sizeof(text), "MIDI: %s", Settings::midi() ? "On" : "Off");
         break;
 
     case ITEM_INSTRUMENT:
@@ -223,6 +228,17 @@ void MenuController::handleRotation(int32_t detents)
         _display->setOctave(static_cast<int8_t>(oct));
 
         _display->showPads();
+
+        break;
+    }
+
+    case ITEM_MIDI:
+    {
+        // Zwei Zustände: rechts drehen = An, links drehen = Aus.
+        // Das NoteOff folgt der beim NoteOn gemerkten Senke, ein
+        // Umschalten während einer gehaltenen Note lässt sie also nicht
+        // hängen (siehe noteViaMidi[] in main.cpp).
+        Settings::setMidi(detents > 0);
 
         break;
     }

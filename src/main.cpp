@@ -60,10 +60,13 @@ bool noteViaMidi[NUM_SENSORS] = {false};
 
 bool lastMidiConnected = false;
 
-// MIDI-Ziel vorhanden? Sonst spielt der Lautsprecher (Standalone).
-static bool midiConnected()
+// Gehen Noten per MIDI raus? Nur wenn die MIDI-Ausgabe im Menü aktiv
+// ist UND ein Ziel verbunden ist. Ist der Schalter aus, spielt der
+// Lautsprecher unabhängig vom Verbindungsstatus (Standalone) — so lässt
+// sich das BananaPhon auch ohne DAW als Instrument benutzen.
+static bool midiActive()
 {
-    return midi.bleConnected() || midi.rtpReady();
+    return Settings::midi() && (midi.bleConnected() || midi.rtpReady());
 }
 
 uint32_t lastStatusUpdate  = 0;
@@ -351,7 +354,7 @@ void loop()
 
         if (sensors[i].pressedEvent())
         {
-            noteViaMidi[i] = !ENABLE_SPEAKER || midiConnected();
+            noteViaMidi[i] = !ENABLE_SPEAKER || midiActive();
 
             bool drums = Settings::instrument() == INST_DRUMS;
 
@@ -415,18 +418,19 @@ void loop()
         updateAftertouch();
     }
 
-    // Verbindet sich ein MIDI-Ziel, während der Lautsprecher spielt:
-    // Stimmen ausklingen lassen, sonst dudeln sie endlos weiter
+    // Übernimmt MIDI die Ausgabe, während der Lautsprecher spielt (Ziel
+    // verbindet sich oder MIDI wird im Menü eingeschaltet): Stimmen
+    // ausklingen lassen, sonst dudeln sie endlos weiter
     if (ENABLE_SPEAKER)
     {
-        bool connected = midiConnected();
+        bool active = midiActive();
 
-        if (connected && !lastMidiConnected)
+        if (active && !lastMidiConnected)
         {
             speaker.allNotesOff();
         }
 
-        lastMidiConnected = connected;
+        lastMidiConnected = active;
     }
 
     // Fallende Peak-Marker animieren (intern getaktet)
@@ -459,7 +463,7 @@ void loop()
         lastStatusUpdate = millis();
 
         displayCtrl.showStatus(midi.bleConnected(), midi.wifiConnected(), midi.rtpReady(),
-                               midi.setupPortalActive(), ENABLE_SPEAKER && !midiConnected());
+                               midi.setupPortalActive(), ENABLE_SPEAKER && !midiActive());
     }
 
     // Batterieanzeige in größeren Abständen aktualisieren
