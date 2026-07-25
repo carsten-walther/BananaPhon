@@ -49,6 +49,11 @@ wo das Gerät herkommt.
 - **MIDI-Schalter** — die MIDI-Ausgabe lässt sich im Menü abschalten,
   dann spielt das Gerät unabhängig über den Lautsprecher (Standalone),
   auch bei verbundenem MIDI-Ziel.
+- **Deep Sleep** — nach 10 Minuten ohne Bedienung geht das Gerät in den
+  Tiefschlaf (Display und Funk aus, µA-Bereich) und wacht über den
+  Rekalibrier-Button wieder auf (ext1 auf GPIO14). Der S3 kann Touch-
+  Wakeup nur über einen einzigen Kanal — der Button ist der robustere,
+  tuning-freie Wecker.
 
 ## Klang & Musikalität (der größte Spielraum)
 
@@ -89,12 +94,6 @@ Menü, sobald das Nachjustieren am Gerät (neues Gemüse, andere
 Umgebung) lästig wird.
 
 ## Robustheit & Strom
-
-**Deep Sleep** — im Akkubetrieb läuft das Gerät, bis der LiPo leer ist.
-Nach z. B. 10 Minuten ohne Berührung in den Deep Sleep gehen und per
-Touch-Wakeup (der ESP32-S3 kann genau das) aufwachen — das verlängert
-die Akkulaufzeit von Stunden auf Wochen. Passt gut zusammen mit der
-Batterie-Warnung.
 
 **Watchdog + Fehler-Resilienz** — der Audio-Task und die
 WiFiManager-Schleife laufen unbeaufsichtigt. Ein Task-Watchdog, der bei

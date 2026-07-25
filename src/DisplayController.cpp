@@ -804,3 +804,38 @@ void DisplayController::showOtaScreen(const char* status, int percent, uint16_t 
 
     display.unloadFont();
 }
+
+void DisplayController::showSleep()
+{
+    display.fillScreen(TFT_BLACK);
+
+    display.setTextDatum(textdatum_t::middle_center);
+
+    display.setFont(&fonts::DejaVu40);
+
+    display.setTextSize(1);
+
+    display.setTextColor(TFT_YELLOW);
+
+    display.drawString("Zzz", display.width() / 2, display.height() / 2 - 16);
+
+    display.unloadFont();
+
+    display.setFont(&fonts::DejaVu12);
+
+    display.setTextColor(TFT_DARKGREY);
+
+    display.drawString("Sleep - Button weckt", display.width() / 2, display.height() / 2 + 22);
+
+    display.unloadFont();
+}
+
+void DisplayController::powerOff()
+{
+    display.setBrightness(0);
+
+    // Panel in den Sleep-Modus und die LCD-Versorgung kappen
+    display.sleep();
+
+    digitalWrite(PIN_LCD_POWER, LOW);
+}

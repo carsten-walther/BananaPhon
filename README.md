@@ -98,6 +98,11 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   (Bluetooth, WLAN, Note für RTP, Zahnrad fürs Setup-Portal,
   Lautsprecher für den Standalone-Betrieb), Batterieanzeige mit
   Ladestand bzw. USB-Erkennung
+- **Deep Sleep nach Inaktivität**: nach 10 Minuten ohne Bedienung
+  (`DEEP_SLEEP_TIMEOUT_MS`) schaltet das Gerät Display und Funk ab und
+  geht in den Tiefschlaf (Stromaufnahme im µA-Bereich, statt Stunden
+  hält der Akku so Wochen). Der Rekalibrier-Button weckt es wieder —
+  danach bootet es normal neu
 
 ## Hardware
 
@@ -269,6 +274,8 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
   Änderung im Menü, danach zählen die im NVS gespeicherten Werte
 - Display (`DISPLAY_ROTATION`, `DISPLAY_BRIGHNESS`, Einblenddauer
   `DISPLAY_TOAST_MS`) und Batterie-Messintervall (`BATTERY_UPDATE_MS`)
+- Deep Sleep (`ENABLE_DEEP_SLEEP`, Inaktivitäts-Timeout
+  `DEEP_SLEEP_TIMEOUT_MS`); Aufwecken über den Rekalibrier-Button
 
 Instrumentspezifisches liegt in [`include/Drums.h`](include/Drums.h):
 

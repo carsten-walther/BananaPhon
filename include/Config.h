@@ -23,7 +23,7 @@ constexpr bool ENABLE_USB_MIDI = false;
 constexpr char MIDI_DEVICE_NAME[] = "BananaPhon";
 
 // Firmware-Version (Splash-Screen); bei Releases mitziehen
-constexpr char FIRMWARE_VERSION[] = "1.0.0";
+constexpr char FIRMWARE_VERSION[] = "2026.07.25";
 
 // WLAN-Setup-Portal: kommt WIFI_PORTAL_AFTER_MS nach dem Start keine
 // Verbindung zustande (oder ist WIFI_SSID in Credentials.h leer),
@@ -280,8 +280,8 @@ constexpr uint32_t SPEAKER_RELEASE_MS = 40;
 // Wet-Anteil. Der Puffer belegt FX_DELAY_MS * Abtastrate Floats
 // (bei 250 ms und 32 kHz: 8000 Werte = 32 KB).
 constexpr uint32_t FX_DELAY_MS    = 250;
-constexpr float FX_DELAY_FEEDBACK = 0.40f;
-constexpr float FX_DELAY_WET      = 0.35f;
+constexpr float FX_DELAY_FEEDBACK = 0.35f;
+constexpr float FX_DELAY_WET      = 0.30f;
 
 // Reverb (Freeverb-artig: 8 Kamm- + 4 Allpassfilter). Raumgröße
 // (0..1 → Nachhallzeit, bei 0.5 rund 1,1 s), Dämpfung der Höhen im
@@ -297,8 +297,23 @@ constexpr float FX_REVERB_WET  = 0.30f;
 
 // Unterer Board-Button (aktiv LOW): manuelle Rekalibrierung aller
 // Sensoren im Betrieb — z. B. nach dem Umstecken auf neues Gemüse.
-// Während der Kalibrierung die Elektroden nicht berühren!
+// Während der Kalibrierung die Elektroden nicht berühren! Derselbe
+// Button weckt das Gerät auch aus dem Deep Sleep (GPIO14 ist RTC-fähig).
 constexpr uint8_t PIN_BUTTON_RECALIBRATE = 14;
+
+// ------------------------------------------------
+// Deep Sleep (Stromsparen im Akkubetrieb)
+// ------------------------------------------------
+//
+// Nach DEEP_SLEEP_TIMEOUT_MS ohne jede Bedienung (kein Pad berührt oder
+// gehalten, kein Encoder, kein Button) legt sich das Gerät schlafen:
+// Noten verstummen, Display und Funk gehen aus, die Stromaufnahme fällt
+// in den µA-Bereich. Aufwecken über den Rekalibrier-Button (ext1 auf
+// GPIO14); Deep Sleep ist praktisch ein Reset, das Gerät bootet danach
+// normal neu (die Einstellungen liegen im NVS).
+constexpr bool ENABLE_DEEP_SLEEP = true;
+
+constexpr uint32_t DEEP_SLEEP_TIMEOUT_MS = 300000; // 5 Minuten
 
 // ------------------------------------------------
 // Display

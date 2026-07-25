@@ -1,5 +1,8 @@
 #include <Arduino.h>
 
+#include <driver/rtc_io.h>
+#include <esp_sleep.h>
+
 #include "Config.h"
 
 #include "DisplayController.h"
@@ -71,6 +74,10 @@ static bool midiActive()
 
 uint32_t lastStatusUpdate  = 0;
 uint32_t lastBatteryUpdate = 0;
+
+// Deep Sleep: Zeitpunkt der letzten Bedienung. Läuft
+// DEEP_SLEEP_TIMEOUT_MS ohne Aktivität ab, schläft das Gerät ein.
+uint32_t lastActivity = 0;
 
 // Aftertouch: Sendetakt und zuletzt gesendeter Wert. Den Bezugspunkt
 // für die Modulation hält jeder TouchSensor selbst (pressureDelta).
@@ -242,6 +249,52 @@ static void updateAftertouch()
 }
 
 // ------------------------------------------------
+// Deep Sleep
+// ------------------------------------------------
+
+// Legt das Gerät schlafen (siehe Config.h). Kehrt nicht zurück — der
+// Deep Sleep ist praktisch ein Reset, der Rekalibrier-Button (aktiv
+// LOW) weckt per ext1 wieder auf, danach läuft setup() normal neu.
+static void enterDeepSleep()
+{
+    Serial.println("Deep Sleep — Aufwecken per Rekalibrier-Button");
+
+    Serial.flush();
+
+    // Ton aus (Lautsprecher-Fahnen und – falls doch etwas hängt –
+    // per MIDI gehaltene Noten). Beim Einschlafen ist nichts gedrückt,
+    // die Schleife ist im Normalfall ein No-Op.
+    speaker.allNotesOff();
+
+    for (uint8_t i = 0; i < NUM_SENSORS; i++)
+    {
+        if (sensors[i].isPressed() && noteViaMidi[i])
+        {
+            midi.noteOff(playedNote[i], playedChannel[i]);
+        }
+    }
+
+    displayCtrl.showSleep();
+
+    delay(1200);
+
+    displayCtrl.powerOff();
+
+    // Rekalibrier-Button (aktiv LOW gegen GND) als Wakeup: RTC-Pullup
+    // halten, damit der Pin im Schlaf sicher HIGH liegt, und über ext1
+    // bei LOW wecken. RTC_PERIPH bleibt dafür versorgt.
+    gpio_num_t wakePin = static_cast<gpio_num_t>(PIN_BUTTON_RECALIBRATE);
+
+    rtc_gpio_pullup_en(wakePin);
+    rtc_gpio_pulldown_dis(wakePin);
+
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    esp_sleep_enable_ext1_wakeup(1ULL << PIN_BUTTON_RECALIBRATE, ESP_EXT1_WAKEUP_ANY_LOW);
+
+    esp_deep_sleep_start();
+}
+
+// ------------------------------------------------
 // Setup
 // ------------------------------------------------
 
@@ -328,6 +381,9 @@ void setup()
     displayCtrl.showHome();
 
     displayCtrl.showBattery(readBatteryMilliVolts());
+
+    // Inaktivitäts-Timer erst jetzt starten (nach Splash/Init)
+    lastActivity = millis();
 }
 
 // ------------------------------------------------
@@ -350,9 +406,19 @@ void loop()
 
     buttonWasPressed = buttonPressed;
 
+    // Bedienung für den Deep-Sleep-Timer sammeln (Button, Pads, Encoder)
+    bool activity = buttonPressed;
+
     for (uint8_t i = 0; i < NUM_SENSORS; i++)
     {
         sensors[i].update();
+
+        // Gedrücktes oder gehaltenes Pad zählt als Aktivität — so
+        // schläft das Gerät auch bei langer gehaltener Note nicht ein
+        if (sensors[i].isPressed())
+        {
+            activity = true;
+        }
 
         if (sensors[i].pressedEvent())
         {
@@ -448,6 +514,8 @@ void loop()
     if (encoder.clicked())
     {
         menu.handleClick();
+
+        activity = true;
     }
 
     int32_t detents = encoder.readDetents();
@@ -455,6 +523,8 @@ void loop()
     if (detents != 0)
     {
         menu.handleRotation(detents);
+
+        activity = true;
     }
 
     menu.update();
@@ -474,6 +544,20 @@ void loop()
         lastBatteryUpdate = millis();
 
         displayCtrl.showBattery(readBatteryMilliVolts());
+    }
+
+    // Deep Sleep: Timer bei Bedienung zurücksetzen, sonst nach Ablauf
+    // einschlafen (kehrt nicht zurück, weckt per Rekalibrier-Button)
+    if (ENABLE_DEEP_SLEEP)
+    {
+        if (activity)
+        {
+            lastActivity = millis();
+        }
+        else if (millis() - lastActivity > DEEP_SLEEP_TIMEOUT_MS)
+        {
+            enterDeepSleep();
+        }
     }
 
     delay(5);

@@ -65,6 +65,14 @@ public:
     // färbt die Statuszeile (z. B. Rot bei Fehler, Grün bei Erfolg).
     void showOtaScreen(const char* status, int percent, uint16_t color = 0xFFFF);
 
+    // Abschieds-Screen vor dem Deep Sleep (kurz stehen lassen, dann
+    // powerOff())
+    void showSleep();
+
+    // Panel und Hintergrundbeleuchtung abschalten und die LCD-
+    // Versorgung kappen — vor dem Deep Sleep, damit nichts leuchtet
+    void powerOff();
+
 private:
     bool _lastBle     = false;
     bool _lastWifi    = false;
