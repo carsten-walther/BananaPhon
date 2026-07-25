@@ -5,10 +5,14 @@
 class SpeakerController;
 class DisplayController;
 
-// Settings-Menü am Rotary-Encoder: Klick öffnet/wechselt den
-// Parameter (Lautstärke, Wellenform, Oktave), Drehen ändert den Wert.
-// Geschlossen wirkt Drehen als Schnellzugriff auf die Lautstärke.
-// Änderungen werden verzögert in den NVS-Flash geschrieben.
+// Settings-Menü am Rotary-Encoder, zwei Modi:
+//   - Blättern (nach dem Öffnen): Drehen wechselt den Parameter, ein
+//     Klick geht in den Wert (bzw. löst Aktionen wie Calibrate aus).
+//   - Bearbeiten: Drehen ändert den Wert, ein Klick geht zurück zum
+//     Blättern.
+// Das Menü öffnet immer bei „Sound". Geschlossen wirkt Drehen als
+// Schnellzugriff auf die Lautstärke. Änderungen werden verzögert in den
+// NVS-Flash geschrieben.
 class MenuController
 {
 public:
@@ -34,6 +38,7 @@ private:
     DisplayController* _display = nullptr;
 
     bool _open         = false;
+    bool _editing      = false; // Wert-Bearbeiten statt Blättern
     uint8_t _item      = 0;
     uint32_t _deadline = 0;
 

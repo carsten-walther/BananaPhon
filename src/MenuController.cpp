@@ -42,49 +42,64 @@ void MenuController::begin(SpeakerController* speaker, DisplayController* displa
 
 void MenuController::show()
 {
-    char text[32];
+    // Erst den reinen Inhalt (Name: Wert bzw. Aktionsname) bauen …
+    char body[32];
 
     switch (_item)
     {
     case ITEM_WAVEFORM:
-        snprintf(text, sizeof(text), "Waveform: %s", waveformNames[Settings::waveform()]);
+        snprintf(body, sizeof(body), "Waveform: %s", waveformNames[Settings::waveform()]);
         break;
 
-
     case ITEM_ARP:
-        snprintf(text, sizeof(text), "Arp: %s", arpNames[Settings::arp()]);
+        snprintf(body, sizeof(body), "Arp: %s", arpNames[Settings::arp()]);
         break;
 
     case ITEM_FX:
-        snprintf(text, sizeof(text), "FX: %s", fxNames[Settings::fx()]);
+        snprintf(body, sizeof(body), "FX: %s", fxNames[Settings::fx()]);
         break;
 
     case ITEM_SCALE:
-        snprintf(text, sizeof(text), "Scale: %s", scaleNames[Settings::scale()]);
+        snprintf(body, sizeof(body), "Scale: %s", scaleNames[Settings::scale()]);
         break;
 
     case ITEM_OCTAVE:
-        snprintf(text, sizeof(text), "Octave: %+d", Settings::octave());
+        snprintf(body, sizeof(body), "Octave: %+d", Settings::octave());
         break;
 
     case ITEM_MIDI:
-        snprintf(text, sizeof(text), "MIDI: %s", Settings::midi() ? "On" : "Off");
+        snprintf(body, sizeof(body), "MIDI: %s", Settings::midi() ? "On" : "Off");
         break;
 
     case ITEM_CALIBRATE:
-        // Aktion statt Wert: Drehen löst die Kalibrierung aus
-        snprintf(text, sizeof(text), "Calibrate: turn");
+        snprintf(body, sizeof(body), "Calibrate");
         break;
 
     case ITEM_RESET:
-        // Zweistufig gegen versehentliches Zurücksetzen
-        snprintf(text, sizeof(text), _resetArmed ? "Reset: sure? turn" : "Factory Reset");
+        snprintf(body, sizeof(body), "Factory Reset");
         break;
 
     case ITEM_INSTRUMENT:
     default:
-        snprintf(text, sizeof(text), "Sound: %s", instrumentNames[Settings::instrument()]);
+        snprintf(body, sizeof(body), "Sound: %s", instrumentNames[Settings::instrument()]);
         break;
+    }
+
+    // … dann je nach Modus einrahmen: Rückfrage beim Reset, eckige
+    // Klammern beim Bearbeiten, „> " beim Blättern.
+    char text[40];
+
+    if (_item == ITEM_RESET && _resetArmed)
+    {
+        snprintf(text, sizeof(text), "Reset: click to confirm");
+    }
+    else if (_editing)
+    {
+        snprintf(text, sizeof(text), "[%s]", body);
+    }
+    else
+    {
+        snprintf(text, sizeof(text), "> %s", body);
     }
 
     _display->showToast(text, MENU_TIMEOUT_MS);
@@ -119,22 +134,71 @@ void MenuController::markDirty()
 
 void MenuController::handleClick()
 {
-    // Jeder Klick entschärft einen angefangenen Werksreset (Wechsel
-    // des Parameters oder Öffnen des Menüs)
-    _resetArmed = false;
-
     if (!_open)
     {
-        // Menü öffnet auf dem zuletzt benutzten Parameter — so ist
-        // z. B. der Sound-Wechsel nur noch einen Klick entfernt
-        _open = true;
-    }
-    else
-    {
-        _item = (_item + 1) % ITEM_COUNT;
+        // Menü öffnet immer bei „Sound", im Blätter-Modus
+        _open       = true;
+        _editing    = false;
+        _resetArmed = false;
+        _item       = ITEM_INSTRUMENT;
+
+        show();
+
+        return;
     }
 
-    show();
+    if (_editing)
+    {
+        // Bearbeiten beenden — zurück zum Blättern
+        _editing = false;
+
+        show();
+
+        return;
+    }
+
+    // Blätter-Modus: Klick auf den aktuellen Eintrag
+    switch (_item)
+    {
+    case ITEM_CALIBRATE:
+        // Aktion: Kalibrierung anfordern und Menü schließen — main.cpp
+        // führt sie aus und übernimmt danach das Display
+        _calibrateRequested = true;
+
+        _open = false;
+
+        return;
+
+    case ITEM_RESET:
+        // Zweistufig gegen versehentliches Zurücksetzen: erster Klick
+        // fragt nach, zweiter führt aus
+        if (!_resetArmed)
+        {
+            _resetArmed = true;
+
+            show();
+
+            return;
+        }
+
+        Settings::factoryReset();
+
+        Serial.println("Werkseinstellungen — Neustart");
+
+        delay(200);
+
+        ESP.restart();
+
+        return;
+
+    default:
+        // Wert-Parameter: in den Bearbeiten-Modus wechseln
+        _editing = true;
+
+        show();
+
+        return;
+    }
 }
 
 void MenuController::handleRotation(int32_t detents)
@@ -156,6 +220,27 @@ void MenuController::handleRotation(int32_t detents)
         return;
     }
 
+    // Blätter-Modus: Drehen wechselt den Parameter (mit Umlauf)
+    if (!_editing)
+    {
+        int32_t n = (static_cast<int32_t>(_item) + detents) % ITEM_COUNT;
+
+        if (n < 0)
+        {
+            n += ITEM_COUNT;
+        }
+
+        _item = static_cast<uint8_t>(n);
+
+        // Wegblättern von „Factory Reset" entschärft die Rückfrage
+        _resetArmed = false;
+
+        show();
+
+        return;
+    }
+
+    // Bearbeiten-Modus: Drehen ändert den Wert des aktuellen Parameters
     switch (_item)
     {
     case ITEM_WAVEFORM:
@@ -282,41 +367,9 @@ void MenuController::handleRotation(int32_t detents)
         break;
     }
 
-    case ITEM_CALIBRATE:
-    {
-        // Aktion, kein Wert: Kalibrierung anfordern und das Menü sofort
-        // schließen — main.cpp führt sie aus (übernimmt danach das
-        // Display). Nichts zu speichern, daher kein markDirty()/show().
-        _calibrateRequested = true;
-
-        _open = false;
-
-        return;
-    }
-
-    case ITEM_RESET:
-    {
-        // Zweistufig: erste Drehung schärft, zweite führt aus. So löst
-        // ein versehentliches Antippen keinen Werksreset aus.
-        if (!_resetArmed)
-        {
-            _resetArmed = true;
-
-            show(); // zeigt jetzt die Rückfrage, hält das Menü offen
-
-            return;
-        }
-
-        Settings::factoryReset();
-
-        Serial.println("Werkseinstellungen — Neustart");
-
-        delay(200);
-
-        ESP.restart();
-
-        return;
-    }
+        // ITEM_CALIBRATE und ITEM_RESET sind Aktionen ohne Wert — sie
+        // laufen über handleClick(), im Bearbeiten-Modus landet man hier
+        // gar nicht.
     }
 
     markDirty();
@@ -330,7 +383,9 @@ void MenuController::update()
     {
         _open = false;
 
-        // Menü-Timeout entschärft einen angefangenen Werksreset
+        // Beim Timeout Bearbeiten-Modus verlassen und eine angefangene
+        // Reset-Rückfrage entschärfen
+        _editing    = false;
         _resetArmed = false;
     }
 

@@ -60,21 +60,22 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   MIDI-Ziel erzwingen — das BananaPhon wird so zum eigenständigen
   Instrument
 - **Settings-Menü am Rotary-Encoder** (EC11/KY-040, per
-  PCNT-Hardware in voller Quadratur ausgewertet): Klick öffnet das
-  Menü (auf dem zuletzt benutzten Parameter) und wechselt zwischen
-  **Sound** (Piano/Drums/Chip), **Wellenform**
+  PCNT-Hardware in voller Quadratur ausgewertet): Ein Klick öffnet das
+  Menü immer bei **Sound**; **Drehen blättert** durch die Parameter,
+  ein **Klick geht in den Wert** (Drehen ändert ihn, Klick wieder
+  zurück). Parameter sind **Sound** (Piano/Drums/Chip), **Wellenform**
   (Dreieck/Rechteck/Sägezahn/Sinus/8-Bit-Chiptune), **Arpeggio**
   (Off/Slow/Fast/Turbo — gehaltene Akkorde werden im C64-Stil als
   schnelle Notenfolge zerlegt), **FX** (Off/Delay/Reverb —
   Echo bzw. Freeverb-Hall auf die Lautsprecher-Summe), **Skala** (Dur, Moll,
   Pentatonik, Blues), **Oktave** (±2), **MIDI** (On/Off —
   schaltet die MIDI-Ausgabe ab und spielt nur noch über den
-  Lautsprecher), **Calibrate** (Drehen löst eine Rekalibrierung
-  aller Sensoren aus) und **Factory Reset** (setzt nach einer
-  Sicherheits-Rückfrage alle Einstellungen zurück und startet neu),
-  Drehen ändert den Wert; die Lautstärke regelt Drehen bei
-  geschlossenem Menü direkt (Schnellzugriff). Alle Werte landen im NVS-Flash und überleben
-  Neustarts — konfigurieren statt kompilieren
+  Lautsprecher), **Calibrate** (Klick löst eine Rekalibrierung aller
+  Sensoren aus) und **Factory Reset** (Klick, dann Bestätigungs-Klick,
+  setzt alle Einstellungen zurück und startet neu). Bei geschlossenem
+  Menü regelt Drehen direkt die Lautstärke (Schnellzugriff). Alle Werte
+  landen im NVS-Flash und überleben Neustarts — konfigurieren statt
+  kompilieren
 - **WLAN-Setup ohne Neu-Flashen**: kommt keine Verbindung zustande,
   öffnet das Gerät ein Captive Portal (AP "BananaPhon",
   http://192.168.4.1, Zahnrad-Icon in der Statusleiste) — dort eingetragene Zugangsdaten überleben
@@ -193,9 +194,9 @@ nicht berührt werden — der Splash weist darauf hin.
 Im Betrieb führt die Firmware die Ruhewerte automatisch langsam nach
 (einstellbar über `TOUCH_BASELINE_INTERVAL_MS` / `TOUCH_BASELINE_FILTER`
 in `Config.h`). Nach größeren Änderungen — neues Gemüse, umgesteckte
-Klemmen — genügt der Menüpunkt **Calibrate** (Encoder-Klick bis dorthin,
-dann drehen): alle Sensoren werden neu kalibriert, dabei ebenfalls nicht
-berühren.
+Klemmen — genügt der Menüpunkt **Calibrate** (Menü öffnen, zu Calibrate
+drehen, Klick): alle Sensoren werden neu kalibriert, dabei ebenfalls
+nicht berühren.
 
 ## MIDI verbinden
 

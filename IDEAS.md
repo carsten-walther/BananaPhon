@@ -26,10 +26,12 @@ wo das Gerät herkommt.
 - **Längeres Ausklingen** — mit dem **FM-E-Piano** (2-Operator-FM,
   DX7/Rhodes-Stil) gibt es einen Klang, der bei gehaltener Taste über
   ~2 s weich ausklingt statt nach 40 ms Release abzureißen.
-- **Einstellungen ohne Neu-Flashen** — Settings-Menü am Rotary-Encoder
-  (Klick = Parameter, Drehen = Wert) für Sound, Wellenform, Arpeggio,
-  Skala, Oktave und Lautstärke; Ablage im NVS-Flash (Preferences) mit
-  verzögertem, gebündeltem Speichern.
+- **Einstellungen ohne Neu-Flashen** — Settings-Menü am Rotary-Encoder:
+  öffnet immer bei Sound, Drehen blättert, Klick geht in den Wert
+  (Drehen ändert, Klick zurück); Aktionen wie Calibrate/Factory Reset
+  per Klick. Für Sound, Wellenform, Arpeggio, FX, Skala, Oktave, MIDI
+  und Lautstärke; Ablage im NVS-Flash (Preferences) mit verzögertem,
+  gebündeltem Speichern.
 - **Aftertouch** — der Anpressdruck wird bei gehaltener Note laufend
   ausgewertet: Channel Pressure per MIDI, Lautstärke-Modulation am
   Lautsprecher. Bezug ist der eingeschwungene Griff
