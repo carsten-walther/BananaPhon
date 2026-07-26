@@ -34,7 +34,8 @@ struct Voice
     float noiseLpf     = 1.0f;  // Filterkoeffizient fürs Rauschen
     bool noiseHp       = false; // Hochpass statt Tiefpass
     float gain         = 1.0f;  // Lautstärke-Ausgleich der Drum
-    float noiseState   = 0.0f;  // Filterzustand (ein Pol)
+    float noiseState   = 0.0f;  // Filterzustand (erster Pol)
+    float noiseState2  = 0.0f;  // zweiter Pol (nur Hochpass-Drums: HiHats/Clap)
 
     // Mehrfach-Anschlag (Clap): so lange burstsLeft > 0 ist, wird die
     // Stimme alle burstSamples neu angeschlagen und klingt dazwischen
@@ -60,6 +61,10 @@ struct Voice
     bool fm           = false;
     uint32_t modPhase = 0;
     float fmIndex     = 0.0f;
+
+    // Zweiter, leicht verstimmter Träger für Schwebung/Breite (Chorus),
+    // damit das Piano weniger statisch-synthetisch klingt
+    uint32_t phase2 = 0;
 };
 
 // Getrennte Stimmen-Pools: Die Drums belegen feste Stimmen nach
@@ -86,17 +91,24 @@ uint8_t activeWaveform = WAVE_CHIP;
 // Aktives Instrument (Instrument-Enum aus Drums.h)
 uint8_t activeInstrument = INST_PIANO;
 
-// 16-Bit-LFSR-Rauschgenerator (NES-Stil) — gemeinsame Quelle für
-// alle Drum-Stimmen
-uint16_t noiseReg = 0xACE1u;
+// Weißes Rauschen per xorshift32 — gemeinsame Quelle für alle Drums.
+// Das frühere 1-Bit-LFSR-Rauschen (nur ±12000) hatte den Crest-Faktor
+// 1.0, also den maximal harten, „blechernen" Klang eines zufälligen
+// Rechtecks. xorshift liefert gleichverteiltes, mehrstufiges Rauschen
+// (Crest ~1.7 wie echtes Weißrauschen) — deutlich weicher.
+uint32_t noiseReg = 0x1234ABCDu;
 
 inline int16_t noiseSample()
 {
-    uint16_t bit = ((noiseReg >> 0) ^ (noiseReg >> 1)) & 1u;
+    noiseReg ^= noiseReg << 13;
+    noiseReg ^= noiseReg >> 17;
+    noiseReg ^= noiseReg << 5;
 
-    noiseReg = static_cast<uint16_t>((noiseReg >> 1) | (bit << 15));
-
-    return (noiseReg & 1u) ? 12000 : -12000;
+    // Obere 16 Bit als Sample, auf die RMS des alten Rauschens (±12000)
+    // skaliert (×0.625), damit die Misch- und Gain-Werte der Drums
+    // weitgehend gültig bleiben.
+    return static_cast<int16_t>((static_cast<int32_t>(static_cast<int16_t>(noiseReg >> 16)) * 5) >>
+                                3);
 }
 
 // Arpeggio: Modus, Schrittlänge in Samples (0 = aus). Die Auswahl
@@ -347,12 +359,13 @@ void startDrumVoice(Voice& v, uint8_t d, uint8_t velocity)
                               (spec.sweepMs * SPEAKER_SAMPLE_RATE))
                        : 1.0f;
 
-    v.ampDecay   = decayPerSample(spec.decayMs);
-    v.toneMix    = spec.toneMix;
-    v.noiseMix   = spec.noiseMix;
-    v.noiseHp    = spec.noiseHp;
-    v.gain       = spec.gain;
-    v.noiseState = 0.0f;
+    v.ampDecay    = decayPerSample(spec.decayMs);
+    v.toneMix     = spec.toneMix;
+    v.noiseMix    = spec.noiseMix;
+    v.noiseHp     = spec.noiseHp;
+    v.gain        = spec.gain;
+    v.noiseState  = 0.0f;
+    v.noiseState2 = 0.0f;
 
     // Härter angeschlagene Felle klingen heller: die Schlagstärke
     // öffnet den Rausch-Tiefpass (skaliert die Eckfrequenz). Beim
@@ -607,14 +620,30 @@ void audioTask(void*)
                     {
                         int16_t n = noiseSample();
 
-                        // Ein-Pol-Filter auf dem LFSR-Rauschen: als
-                        // Tiefpass nimmt er Snare und Toms die blecherne
-                        // Härte, als Hochpass (Differenz zum Tiefpass)
-                        // gibt er HiHats und Clap ihr Zischen statt
-                        // eines breitbandigen Rauschteppichs
                         v.noiseState += (n - v.noiseState) * v.noiseLpf;
 
-                        s += (v.noiseHp ? (n - v.noiseState) : v.noiseState) * v.noiseMix;
+                        float filtered;
+
+                        if (v.noiseHp)
+                        {
+                            // 2-poliger Hochpass (12 dB/Okt): zwei
+                            // kaskadierte Ein-Pol-HP. Der steile Abfall
+                            // nimmt HiHats/Clap den blechernen Mittenhonk
+                            // und lässt nur das luftige Zischen übrig.
+                            float hp1 = n - v.noiseState;
+
+                            v.noiseState2 += (hp1 - v.noiseState2) * v.noiseLpf;
+
+                            filtered = hp1 - v.noiseState2;
+                        }
+                        else
+                        {
+                            // Ein-Pol-Tiefpass für Snare/Toms (ein
+                            // 2-Pol-Tiefpass machte die Snare zu dumpf)
+                            filtered = v.noiseState;
+                        }
+
+                        s += filtered * v.noiseMix;
                     }
 
                     mix += s * v.amp * v.gain * DRUM_GAIN;
@@ -641,16 +670,27 @@ void audioTask(void*)
                         PIANO_INDEX_FLOOR + (v.fmIndex - PIANO_INDEX_FLOOR) * pianoIndexDecay;
 
                     v.phase += v.step;
-                    v.modPhase += v.step * PIANO_MOD_RATIO;
+
+                    // Zweiter Träger leicht verstimmt (Chorus/Schwebung)
+                    v.phase2 += v.step + static_cast<uint32_t>(v.step * PIANO_DETUNE);
+
+                    // Modulator minimal inharmonisch (nicht ganzzahliges
+                    // Verhältnis) — Obertöne stehen nicht perfekt harmonisch
+                    v.modPhase +=
+                        v.step * PIANO_MOD_RATIO + static_cast<uint32_t>(v.step * PIANO_MOD_DETUNE);
 
                     // Phasenmodulation: der Modulator verschiebt den
-                    // Ablesepunkt in der Sinustabelle des Trägers
+                    // Ablesepunkt in der Sinustabelle der Träger
                     int32_t offset =
                         static_cast<int32_t>(sineLut[v.modPhase >> 22] * v.fmIndex) / 32000;
 
-                    uint32_t index = ((v.phase >> 22) + offset) & 1023u;
+                    uint32_t index  = ((v.phase >> 22) + offset) & 1023u;
+                    uint32_t index2 = ((v.phase2 >> 22) + offset) & 1023u;
 
-                    mix += sineLut[index] * v.amp * arpGain[gainIndex] * v.pressure * MELODY_GAIN;
+                    float carrier = sineLut[index] * (1.0f - PIANO_CHORUS_MIX) +
+                                    sineLut[index2] * PIANO_CHORUS_MIX;
+
+                    mix += carrier * v.amp * arpGain[gainIndex] * v.pressure * MELODY_GAIN;
 
                     continue;
                 }
@@ -832,6 +872,7 @@ static void startMelodyVoice(Voice& v, uint8_t note, uint8_t velocity, uint8_t i
         // bei Phase 0, daher kein Klick), Anschlags-Glanz aufziehen
         v.amp      = v.target;
         v.modPhase = 0;
+        v.phase2   = 0; // zweiter Träger startet in Phase, driftet dann
         v.fmIndex  = pianoStartIndex(velocity);
     }
 }

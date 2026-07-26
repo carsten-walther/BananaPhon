@@ -50,6 +50,23 @@ constexpr float PIANO_INDEX_DECAY_MS = 75.0f;
 // (1.0 = kein Einfluss, wie bisher).
 constexpr float PIANO_VEL_INDEX_MIN = 0.35f;
 
+// Gegen den „synthetischen" Klang des reinen 2-Operator-FM (perfekt
+// harmonische, statische Obertöne):
+//
+// PIANO_MOD_DETUNE — leichte Inharmonizität: der Modulator läuft nicht
+// exakt ganzzahlig, die Obertöne stehen also nicht perfekt harmonisch
+// (wie bei echten, leicht gestreckten Klaviersaiten). Anteil des
+// Phasenschritts, der zusätzlich addiert wird (0 = aus).
+constexpr float PIANO_MOD_DETUNE = 0.02f;
+
+// PIANO_DETUNE / PIANO_CHORUS_MIX — eine zweite, leicht verstimmte
+// Trägerstimme sorgt für Schwebung und Breite (Rhodes-artiger Chorus).
+// PIANO_DETUNE ist ihre Verstimmung (Anteil der Tonhöhe, ~0.6 % ≈ 10 ct),
+// PIANO_CHORUS_MIX ihr Beimischanteil (0 = aus, 0.5 = gleich laut wie
+// der Hauptträger; klein halten, sonst wird die Schwebung zum Wobble).
+constexpr float PIANO_DETUNE     = 0.006f;
+constexpr float PIANO_CHORUS_MIX = 0.15f;
+
 // Amplituden-Hüllkurve: langes Ausklingen bei gehaltener Taste,
 // schnelleres Release nach dem Loslassen (jeweils bis -60 dB). Die
 // Pro-Sample-Faktoren rechnet der SpeakerController zur Laufzeit aus
@@ -64,8 +81,8 @@ constexpr float PIANO_RELEASE_MS = 150.0f;
 // Die sieben Pads werden zum Kit. Auf der MIDI-Seite gehen die
 // General-MIDI-Percussion-Noten auf Kanal 10 raus — jede DAW spielt
 // damit automatisch ein echtes Schlagzeug. Der Speaker synthetisiert
-// die Sounds selbst (808-Stil: Sinus mit Pitch-Hüllkurve + LFSR-
-// Rauschen).
+// die Sounds selbst (808-Stil: Sinus mit Pitch-Hüllkurve + weißes
+// xorshift-Rauschen).
 
 constexpr uint8_t DRUM_MIDI_CHANNEL = 10;
 
@@ -91,11 +108,13 @@ struct DrumSpec
     float decayMs;     // Ausklingen auf -60 dB (One-Shot)
     float toneMix;     // Anteil Sinus
     float noiseMix;    // Anteil Rauschen
-    float noiseCutoff; // Eckfrequenz des Rauschfilters in Hz (ein Pol)
-    bool noiseHp;      // true = Hochpass statt Tiefpass. Weißes Rauschen
-                       // hat auch nach einem Tiefpass vollen Bassanteil —
-                       // HiHats und Clap brauchen die Gegenrichtung,
-                       // sonst rauschen sie statt zu zischen.
+    float noiseCutoff; // Eckfrequenz des Rauschfilters in Hz
+    bool noiseHp;      // true = Hochpass (2-polig, 12 dB/Okt) statt
+                       // Tiefpass (1-polig). Weißes Rauschen hat auch
+                       // nach einem Tiefpass vollen Bassanteil — HiHats
+                       // und Clap brauchen die Gegenrichtung, sonst
+                       // rauschen sie statt zu zischen; der steile 2-Pol
+                       // nimmt ihnen zusätzlich den blechernen Mittenhonk.
     uint8_t bursts;    // zusätzliche Anschläge nach dem ersten (0 = keiner).
                        // Ein Clap ist kein einzelner Schlag, sondern eine
                        // Handvoll dicht gestaffelter — erst danach der Tail.
@@ -123,11 +142,11 @@ constexpr DrumSpec drumSpecs[NUM_SENSORS] = {
     // freq  floor   sweepMs decayMs  tone   noise  cutHz    hp     brst  brstMs choke gain
     {170.0f,  50.0f,  50.0f, 320.0f, 1.00f, 0.00f,    0.0f, false, 0,     0.0f, -1,  1.7f}, // Kick:        170->50 Hz in 50 ms
     {190.0f, 180.0f,   4.0f, 140.0f, 0.45f, 0.90f, 1250.0f, false, 0,     0.0f, -1,  1.4f}, // Snare:       kurzer Snap, dann fester Ton + dunkles Rauschen
-    {  0.0f,   0.0f,   0.0f,  70.0f, 0.00f, 1.00f, 3200.0f, true,  0,     0.0f,  3,  1.5f}, // HiHat zu:    wuergt die offene ab
-    {  0.0f,   0.0f,   0.0f, 350.0f, 0.00f, 0.80f, 2800.0f, true,  0,     0.0f, -1,  1.5f}, // HiHat offen
+    {  0.0f,   0.0f,   0.0f,  70.0f, 0.00f, 1.00f, 3200.0f, true,  0,     0.0f,  3,  2.4f}, // HiHat zu:    wuergt die offene ab (Gain: 2-Pol-HP daempft ~1.6x)
+    {  0.0f,   0.0f,   0.0f, 350.0f, 0.00f, 0.80f, 2800.0f, true,  0,     0.0f, -1,  2.25f}, // HiHat offen
     {105.0f,  80.0f,  60.0f, 250.0f, 1.00f, 0.06f, 1000.0f, false, 0,     0.0f, -1,  1.5f}, // Tom tief:    105->80 Hz
     {160.0f, 120.0f,  60.0f, 250.0f, 1.00f, 0.06f, 1000.0f, false, 0,     0.0f, -1,  1.5f}, // Tom hoch:    160->120 Hz
-    {  0.0f,   0.0f,   0.0f, 160.0f, 0.00f, 0.95f, 1250.0f, true,  2,    10.0f, -1,  1.5f}, // Clap:        3 Anschlaege im 10-ms-Raster, dann Tail
+    {  0.0f,   0.0f,   0.0f, 160.0f, 0.00f, 0.95f, 1250.0f, true,  2,    10.0f, -1,  1.85f}, // Clap:        3 Anschlaege im 10-ms-Raster, dann Tail (Gain: 2-Pol-HP)
 };
 // clang-format on
 
