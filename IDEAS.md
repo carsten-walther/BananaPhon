@@ -1,97 +1,27 @@
 # Ideen
 
 Was jetzt noch geht, sortiert nach Themen und grob nach Aufwand/Nutzen.
-Umgesetztes bleibt als kurze Notiz stehen, damit nachvollziehbar ist,
-wo das Gerät herkommt.
-
-## Umgesetzt
-
-- **Wellenform-Umschalter** — Dreieck, Rechteck, Sägezahn, Sinus
-  (1024er-LUT) und **8-Bit-Chiptune** (25-%-Puls mit 8-Bit-Rasterung in
-  der Mix-Stufe, seit v1.0 der Default). Umschaltbar im Settings-Menü.
-- **Arpeggio** — gehaltene Akkorde werden im C64-Stil zyklisch als
-  schnelle Notenfolge zerlegt (Off/Slow/Fast/Turbo, sample-genau im
-  Audio-Task, mit De-Klick-Blende).
-- **Skalen und Oktav-Shift** — Dur, Moll, Pentatonik, Blues als
-  Menüpunkt (`include/Scales.h`) plus Oktave ±2; die Notentabelle wird
-  zur Laufzeit berechnet, die Pad-Beschriftung zieht automatisch mit.
-- **Noise-Kanal / Drumkit** — der Vorschlag „ein Pad wird zur
-  Snare/HiHat" ist als vollständiger **Drumkit-Modus** gelandet: sieben
-  Pads als Kick, Snare, HiHats (zu/offen), zwei Toms und Clap,
-  MIDI-seitig als GM-Percussion auf Kanal 10, am Lautsprecher als
-  808-Stil-Synthese (Sinus mit Tonhöhen-Hüllkurve auf einen Sockel +
-  LFSR-Rauschen mit Tief- bzw. Hochpass, One-Shots mit Velocity).
-  Dazu Clap-Mehrfachanschlag, HiHat-Choke und Velocity auf die
-  Helligkeit. Rezepte in `include/Drums.h`.
-- **Längeres Ausklingen** — mit dem **FM-E-Piano** (2-Operator-FM,
-  DX7/Rhodes-Stil) gibt es einen Klang, der bei gehaltener Taste über
-  ~2 s weich ausklingt statt nach 40 ms Release abzureißen.
-- **Einstellungen ohne Neu-Flashen** — Settings-Menü am Rotary-Encoder:
-  öffnet immer bei Sound, Drehen blättert, Klick geht in den Wert
-  (Drehen ändert, Klick zurück); Aktionen wie Calibrate/Factory Reset
-  per Klick. Für Sound, Wellenform, Arpeggio, FX, Skala, Oktave, MIDI
-  und Lautstärke; Ablage im NVS-Flash (Preferences) mit verzögertem,
-  gebündeltem Speichern.
-- **Aftertouch** — der Anpressdruck wird bei gehaltener Note laufend
-  ausgewertet: Channel Pressure per MIDI, Lautstärke-Modulation am
-  Lautsprecher. Bezug ist der eingeschwungene Griff
-  (`AFTERTOUCH_SETTLE_MS`), nicht die Anschlagsspitze — sonst fiele
-  jede Note direkt nach dem Anschlag ab. Sendetakt und Deadband halten
-  den MIDI-Bus frei.
-- **Splash-Screen** — Name + Firmware-Version beim Start, Kalibrierung
-  und Funk-Initialisierung laufen währenddessen im Hintergrund.
-- **Hall/Delay am Speaker** — ein globaler Effekt auf die Mix-Summe,
-  im Menü umschaltbar (Off/Delay/Reverb): eine Rückkopplungs-Delay-Line
-  (Echo) und ein Freeverb-artiger Hall (8 Kamm- + 4 Allpassfilter).
-  Delay und Reverb teilen sich denselben Pufferspeicher (nie
-  gleichzeitig aktiv). Auswahl im NVS. Parameter in `Config.h`.
-- **OTA-Update** — neue Firmware kabellos über WLAN: ArduinoOTA-Push
-  aus PlatformIO oder Upload-Seite im Browser. Fortschritt auf dem
-  Display, Fallback auf die alte Partition bei Fehlern.
-- **MIDI-Schalter** — die MIDI-Ausgabe lässt sich im Menü abschalten,
-  dann spielt das Gerät unabhängig über den Lautsprecher (Standalone),
-  auch bei verbundenem MIDI-Ziel.
-- **Deep Sleep** — nach 5 Minuten ohne Bedienung geht das Gerät in den
-  Tiefschlaf (Display und Funk aus, µA-Bereich) und wacht durch Drehen
-  des Encoders wieder auf (ext1 auf der RTC-fähigen Dreh-Spur GPIO18;
-  der Encoder-Taster GPIO43 ist nicht RTC-fähig und kann Deep Sleep
-  nicht wecken). Beim Einschlafen wird der Ruhepegel gelesen und auf den
-  Gegenpegel geweckt — so weckt jede Drehung unabhängig von der
-  Rasterstellung. Die manuelle Rekalibrierung wanderte dabei vom
-  (unzugänglichen) Board-Button in den Menüpunkt **Calibrate**.
-- **Batterie-Warnung** — unter `BATTERY_WARN_PERCENT` (Default 5 %)
-  blinkt das Batterie-Symbol im Akkubetrieb, bevor der LiPo in die
-  Tiefentladung läuft.
-- **Werkseinstellungen** — Menüpunkt **Factory Reset**: setzt nach einer
-  zweistufigen Sicherheits-Rückfrage (zweimal drehen) alle NVS-Werte
-  zurück und startet neu.
-- **Watchdog** — der Task-Watchdog überwacht Audio- und Loop-Task und
-  startet das Gerät bei einem Hänger neu (der Audio-Task wird explizit
-  angemeldet, weil ein blockiertes I2S die Idle-Überwachung nicht
-  auslöst; während OTA ist der Loop-Wächter abgemeldet).
-- **Looper** — nimmt das Live-Spiel auf (Note, Velocity, Instrument,
-  Senke) und loopt es; man überlagert Schicht für Schicht (erst Beat,
-  dann Melodie). Freie Länge (die erste Aufnahme legt sie fest), Overdub,
-  Bedienung über die zwei Board-Buttons (Boot = Rec/Overdub, User =
-  Stop/Start bzw. Clear lang). Wiedergabe an dieselbe Senke wie beim
-  Einspielen — am Lautsprecher multitimbral über getrennte Stimmen-Pools
-  (Drums 0..6, Melodie dahinter), sodass Drum-Loop und Live-Melodie
-  sauber nebeneinander klingen, ohne dass eine Kick die Melodie-Stimme
-  überschreibt (das knackte sonst).
+Der aktuelle Stand der Klangerzeugung steht in
+[`KLANGERZEUGUNG.md`](KLANGERZEUGUNG.md), die umgesetzten Features
+beschreibt die [`README.md`](README.md).
 
 ## Klang & Musikalität (der größte Spielraum)
 
-**Vibrato** — der Druck moduliert jetzt die Lautstärke (siehe
-Aftertouch oben). Die Tonhöhe wäre die zweite Richtung: ein LFO, dessen
-Tiefe am Druck hängt, oder Pitch-Bend direkt aus dem Druckwert. Beim
-Speaker ein Multiplikator auf den Phasenschritt, bei MIDI ein echtes
-Pitch-Bend-Event.
+**Vibrato** — der Druck moduliert jetzt die Lautstärke (Aftertouch). Die
+Tonhöhe wäre die zweite Richtung: ein LFO, dessen Tiefe am Druck hängt,
+oder Pitch-Bend direkt aus dem Druckwert. Beim Speaker ein Multiplikator
+auf den Phasenschritt, bei MIDI ein echtes Pitch-Bend-Event.
 
 **Weitere Instrumente** — die Instrument-Weiche (`Instrument`-Enum in
 `include/Drums.h`, Umschaltung über `SpeakerController::setInstrument`)
 trägt inzwischen drei Klangerzeuger. Neue kommen hinten ans Enum, damit
 gespeicherte NVS-Werte gültig bleiben. Naheliegend: ein Bass (Sägezahn
 mit Filter-Hüllkurve) oder Pads/Strings.
+
+**Piano/Drums weiter verfeinern** — beide klingen gut, gingen aber noch
+besser. Piano: Tine-Attack von der Body-Stimme trennen, mehr
+Inharmonizität, echtes (mehrstimmiges) Chorus statt einer verstimmten
+Zweitstimme. Drums: Bandpass-Rauschen für Snare/Clap, Layering.
 
 ### Weitere Kandidaten
 
@@ -100,25 +30,28 @@ Klangerzeuger für einen externen Sequencer. Die Infrastruktur dafür ist
 mit dem Synth komplett da, es fehlt nur die Empfangsseite im
 `MidiController`.
 
-Günstig (v1, empfohlen) — „BLE-Noten klingen über den Speaker"
-- ENABLE_MIDI_RECEIVE in Config; MidiController reicht einen Callback an midiOut.setRawMidiCallback durch; eine kleine Parse-Funktion (NoteOn/NoteOff → Speaker).
-- ~40–60 Zeilen, ~½ Sitzung. Der Parse-Teil ist per Simulation prüfbar; der echte Test braucht eine DAW über BLE.
-- Entscheidung nötig: Kanal ignorieren (alles auf dem aktuellen Instrument) — am einfachsten für v1.
+- **Günstig (v1, empfohlen)** — „BLE-Noten klingen über den Speaker":
+  `ENABLE_MIDI_RECEIVE` in Config; `MidiController` reicht einen Callback
+  an `midiOut.setRawMidiCallback` durch; eine kleine Parse-Funktion
+  (NoteOn/NoteOff → Speaker). ~40–60 Zeilen, ~½ Sitzung. Entscheidung
+  nötig: Kanal ignorieren (alles auf dem aktuellen Instrument).
+- **Moderat** — „richtiger Klangerzeuger": kanalbewusst (Kanal 10 →
+  Drumkit, sonst Melodie-Instrument), All-Notes-Off bei Disconnect,
+  optional Sustain-CC/Pitch-Bend, „MIDI IN"-Anzeige. ~1 Sitzung.
+- **Teuer** — mehr Polyphonie: aktuell 8 Melodie-Stimmen; ein Sequencer
+  mit dichten Akkorden stiehlt schnell. Multitimbral über mehrere Kanäle
+  gleichzeitig wäre nochmal deutlich mehr.
 
-Moderat — „richtiger Klangerzeuger"
-- Kanal-bewusst: Kanal 10 → Drumkit, sonst Melodie-Instrument; All-Notes-Off bei Disconnect; optional Sustain-CC/Pitch-Bend; „MIDI IN"-Anzeige.
-- ~1 Sitzung.
-
-Teuer — der eigentliche Kostentreiber
-- Polyphonie: Der Synth hat genau 7 Stimmen (an NUM_SENSORS gekoppelt). Ein Sequencer mit Akkorden/Arps stiehlt schnell Stimmen. Mehr Polyphonie = echter Umbau der Voice-Verwaltung (RAM/CPU). Multitimbral (mehrere Instrumente gleichzeitig auf verschiedenen Kanälen) wäre nochmal deutlich mehr.
-
-Drei ehrliche Haken (unabhängig vom Umfang)
-
-1. 7 Stimmen — für Sequencer-Material knapp.
-2. MIDI-Thru-Echo: BLE ist bidirektional; hat die DAW „MIDI Thru" an, spielt das Gerät die eigenen Pad-Noten doppelt.
-3. RTP-Empfang liefe über einen anderen Pfad (AppleMIDI hat eigene Handler) — der Raw-Callback deckt BLE + USB ab, RTP bräuchte separate Verdrahtung. Für „BLE-Empfang" reicht v1.
+Drei Haken: (1) die Stimmenzahl ist für Sequencer-Material knapp;
+(2) MIDI-Thru-Echo, wenn die DAW „MIDI Thru" an hat; (3) RTP-Empfang
+liefe über einen anderen Pfad (AppleMIDI hat eigene Handler) — der
+Raw-Callback deckt BLE + USB ab, für RTP wäre separate Verdrahtung nötig.
 
 ## Bedienung & Anzeige
+
+**Persistenter Looper-Fortschritt** — der Looper-Zustand ist in der
+Icon-Leiste sichtbar (grau/grün/rot); ein Fortschrittsbalken der
+Loop-Position (Groovebox-Stil) wäre der nächste Schliff.
 
 **Weitere Menüpunkte** — Touch-Schwellen und Velocity-Kennlinie stecken
 noch in der `Config.h`. Sie sind die naheliegendsten Kandidaten fürs
@@ -131,7 +64,9 @@ Umgebung) lästig wird.
 Velocity-Kennlinie, Glitch-Filter, Skalen-Mapping und die Noten-Weiche
 sind pure Logik ohne Hardware. Mit PlatformIOs `pio test` (native
 environment) ließen die sich auf dem Rechner testen und in die
-bestehende CI hängen.
+bestehende CI hängen. (Die DSP-Änderungen werden bereits mit
+freistehenden C++-Simulationen geprüft — die ließen sich in echte Tests
+gießen.)
 
 **Release-Workflow** — ein GitHub-Actions-Job, der bei einem Tag die
 Firmware baut und die `.bin` als Release-Asset anhängt. Zusammen mit ESP

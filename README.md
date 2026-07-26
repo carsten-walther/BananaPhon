@@ -36,16 +36,19 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   glockiger Anschlag (fallender Modulationsindex), der bei gehaltener
   Taste über ~2 s weich ausklingt; die Anschlagstärke steuert dabei
   auch die Helligkeit, nicht nur die Lautstärke — ein satter Hammer-
-  schlag klingt obertonreicher als ein leichter Anschlag; Skala,
-  Oktave und Arpeggio wirken wie beim Chip-Sound
+  schlag klingt obertonreicher als ein leichter Anschlag. Gegen den
+  rein-synthetischen Klang sorgen eine leichte Inharmonizität und eine
+  zweite, minimal verstimmte Trägerstimme (Schwebung/Breite) für Wärme;
+  Skala, Oktave und Arpeggio wirken wie beim Chip-Sound
 - **Drumkit-Modus**: die sieben Pads werden zu Kick, Snare, HiHats
   (zu/offen), zwei Toms und Clap — per MIDI als General-MIDI-
   Percussion auf Kanal 10 (jede DAW spielt sofort ein echtes
   Schlagzeug), am Lautsprecher als 808-Stil-Synthese: Sinus mit
   Tonhöhen-Hüllkurve auf einen Sockel (die Kick fällt von 170 auf
   50 Hz und *bleibt* dort, statt in den Subbass wegzulaufen) plus
-  LFSR-Rauschen, tiefpassgefiltert für Snare und Toms,
-  hochpassgefiltert für HiHats und Clap. Dazu die Details, die ein Kit
+  weißem Rauschen (xorshift, weich statt blechern), tiefpassgefiltert
+  (1-polig) für Snare und Toms, 2-polig hochpassgefiltert für die
+  luftigen HiHats und den Clap. Dazu die Details, die ein Kit
   glaubwürdig machen: der Clap besteht aus drei gestaffelten Anschlägen
   im 10-ms-Raster statt einem, die geschlossene HiHat würgt die offene
   ab wie auf einem echten Kit, und die Anschlagstärke steuert nicht nur
@@ -330,8 +333,11 @@ Instrumentspezifisches liegt in [`include/Drums.h`](include/Drums.h):
   Helligkeit öffnet)
 - FM-E-Piano: Modulationsverhältnis (`PIANO_MOD_RATIO`), Anschlagsglanz
   (`PIANO_INDEX_START` / `_FLOOR` / `_DECAY_MS`), wie stark die
-  Anschlagstärke ihn öffnet (`PIANO_VEL_INDEX_MIN`) sowie Ausklingen
-  und Release in Millisekunden (`PIANO_DECAY_MS`, `PIANO_RELEASE_MS`)
+  Anschlagstärke ihn öffnet (`PIANO_VEL_INDEX_MIN`), Ausklingen und
+  Release in Millisekunden (`PIANO_DECAY_MS`, `PIANO_RELEASE_MS`) sowie
+  Wärme gegen den synthetischen Klang: Inharmonizität (`PIANO_MOD_DETUNE`)
+  und Chorus einer zweiten Trägerstimme (`PIANO_DETUNE`,
+  `PIANO_CHORUS_MIX` — größer = mehr Schwebung, aber auch mehr Wobble)
 
 **Hinweis zu USB-Host-MIDI:** Der USB-C-Port wird dann exklusiv vom
 USB-Host belegt — der serielle Monitor funktioniert nicht mehr, und es
@@ -351,9 +357,12 @@ src/OtaController.*         OTA-Update (ArduinoOTA-Push + Web-Upload)
 src/SpeakerController.*     Standalone-Synth über I2S (MAX98357A)
 src/EncoderController.*     Rotary-Encoder (PCNT-Quadraturzähler)
 src/MenuController.*        Settings-Menü (Encoder-Bedienung)
+src/LooperController.*      Looper (Aufnahme/Wiedergabe, multitimbral)
 src/Settings.*              persistente Einstellungen (NVS)
 src/DisplayController.*     Panel-Konfiguration und UI
 scripts/format.py           Format-Target und compiledb-Hook
+KLANGERZEUGUNG.md           wie die Instrumente ihren Klang erzeugen
+IDEAS.md                    offene Ideen / Roadmap
 ```
 
 ## Entwicklung
