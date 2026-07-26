@@ -40,6 +40,12 @@ void LooperController::forceOffActive()
         {
             _speaker->noteOff(a.note);
         }
+
+        // Zugehöriges Pad wieder ausschalten
+        if (_onVisual)
+        {
+            _onVisual(a.note, a.instrument, false, 0);
+        }
     }
 
     _activeCount = 0;
@@ -63,7 +69,7 @@ void LooperController::fireEvent(const LoopEvent& e)
         // Liste: ältesten Eintrag verwerfen, damit nichts überläuft
         if (_activeCount < LOOP_MAX_ACTIVE)
         {
-            _active[_activeCount++] = {e.note, e.channel, e.viaMidi};
+            _active[_activeCount++] = {e.note, e.channel, e.instrument, e.viaMidi};
         }
     }
     else
@@ -88,6 +94,12 @@ void LooperController::fireEvent(const LoopEvent& e)
                 break;
             }
         }
+    }
+
+    // Pad passend zur Note aufleuchten lassen / ausschalten
+    if (_onVisual)
+    {
+        _onVisual(e.note, e.instrument, e.velocity > 0, e.velocity);
     }
 }
 

@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <functional>
+
 #include "Config.h"
 
 class SpeakerController;
@@ -21,7 +23,18 @@ class DisplayController;
 class LooperController
 {
 public:
+    // Sichtbar machen, welche Note der Loop gerade spielt (on=true beim
+    // NoteOn, false beim NoteOff) — main.cpp bildet Note+Instrument auf
+    // ein Pad ab und lässt es aufleuchten.
+    using VisualFn =
+        std::function<void(uint8_t note, uint8_t instrument, bool on, uint8_t velocity)>;
+
     void begin(SpeakerController* speaker, MidiController* midi, DisplayController* display);
+
+    void onVisual(const VisualFn& fn)
+    {
+        _onVisual = fn;
+    }
 
     // Boot-Button: Rec -> Overdub-Zyklus (leer: Erstaufnahme starten;
     // Aufnahme: Loop fixieren + Wiedergabe; Wiedergabe: Overdub an/aus;
@@ -82,11 +95,13 @@ private:
     };
 
     // Momentan klingende Loop-Noten — zum sicheren Abschalten am
-    // Loop-Ende und bei Stop/Clear (keine hängenden Noten)
+    // Loop-Ende und bei Stop/Clear (keine hängenden Noten) und um beim
+    // Abschalten das passende Pad wieder auszuschalten (instrument)
     struct ActiveNote
     {
         uint8_t note;
         uint8_t channel;
+        uint8_t instrument;
         bool viaMidi;
     };
 
@@ -98,6 +113,8 @@ private:
     SpeakerController* _speaker = nullptr;
     MidiController* _midi       = nullptr;
     DisplayController* _display = nullptr;
+
+    VisualFn _onVisual;
 
     LoopEvent _events[LOOP_MAX_EVENTS] = {};
     uint16_t _count                    = 0;

@@ -136,6 +136,44 @@ static bool midiActive()
     return Settings::midi() && (midi.bleConnected() || midi.rtpReady());
 }
 
+// Loop-Wiedergabe auf dem Keyboard sichtbar machen: Note + Instrument
+// auf ein Pad abbilden und es aufleuchten bzw. ausgehen lassen.
+//
+// Die Anzeige richtet sich nach dem AKTUELL angezeigten Instrument: In
+// der Drums-Ansicht leuchtet nur die Drum-Ebene des Loops (über
+// drumNotes), in einer Melodie-Ansicht (Piano/Chip) nur die Melodie
+// (über die Skalen-/Oktav-Zuordnung shiftedNote). So passt das
+// Aufleuchten immer zur sichtbaren Pad-Beschriftung; Noten der jeweils
+// anderen Ebene oder außerhalb des aktuellen Pad-Satzes leuchten nicht.
+static void looperVisual(uint8_t note, uint8_t instrument, bool on, uint8_t velocity)
+{
+    bool displayDrums = Settings::instrument() == INST_DRUMS;
+    bool eventDrums   = instrument == INST_DRUMS;
+
+    if (displayDrums != eventDrums)
+    {
+        return; // Loop-Ebene passt nicht zur angezeigten Belegung
+    }
+
+    int8_t pad = -1;
+
+    for (uint8_t i = 0; i < NUM_SENSORS; i++)
+    {
+        if ((eventDrums ? drumNotes[i] : shiftedNote(i)) == note)
+        {
+            pad = static_cast<int8_t>(i);
+            break;
+        }
+    }
+
+    if (pad < 0)
+    {
+        return;
+    }
+
+    displayCtrl.drawPad(static_cast<uint8_t>(pad), on, velocity);
+}
+
 uint32_t lastStatusUpdate  = 0;
 uint32_t lastBatteryUpdate = 0;
 
@@ -421,6 +459,9 @@ void setup()
         userButton.begin();
 
         looper.begin(&speaker, &midi, &displayCtrl);
+
+        // Loop-Wiedergabe lässt die passenden Pads aufleuchten
+        looper.onVisual(looperVisual);
     }
 
     // OTA: Während eines Updates den Ton stoppen und den Fortschritt
