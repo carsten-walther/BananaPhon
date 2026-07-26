@@ -259,3 +259,127 @@ uint8_t LooperController::displayState() const
 
     return 0; // aus/gestoppt
 }
+
+// ------------------------------------------------
+// Serialisierung (Browser-Austausch)
+// ------------------------------------------------
+//
+// Kompaktes, plattform-explizit little-endian gepacktes Format:
+//   "BPL1"            4 Byte Magic + Version
+//   loopLen           uint32
+//   count             uint16
+//   count × Event     je 9 Byte: timeMs(u32) note vel instrument channel viaMidi
+namespace
+{
+constexpr uint8_t LOOP_MAGIC[4] = {'B', 'P', 'L', '1'};
+constexpr size_t LOOP_HEADER    = 4 + 4 + 2;
+constexpr size_t LOOP_EVENT     = 9;
+
+void putU32(uint8_t* b, size_t& p, uint32_t v)
+{
+    b[p++] = v & 0xFF;
+    b[p++] = (v >> 8) & 0xFF;
+    b[p++] = (v >> 16) & 0xFF;
+    b[p++] = (v >> 24) & 0xFF;
+}
+
+uint32_t getU32(const uint8_t* b, size_t p)
+{
+    return static_cast<uint32_t>(b[p]) | (static_cast<uint32_t>(b[p + 1]) << 8) |
+           (static_cast<uint32_t>(b[p + 2]) << 16) | (static_cast<uint32_t>(b[p + 3]) << 24);
+}
+} // namespace
+
+size_t LooperController::serialize(uint8_t* buf, size_t max) const
+{
+    if (_count == 0)
+    {
+        return 0; // nichts aufgenommen
+    }
+
+    size_t need = LOOP_HEADER + static_cast<size_t>(_count) * LOOP_EVENT;
+
+    if (need > max)
+    {
+        return 0; // Puffer zu klein
+    }
+
+    size_t p = 0;
+
+    buf[p++] = LOOP_MAGIC[0];
+    buf[p++] = LOOP_MAGIC[1];
+    buf[p++] = LOOP_MAGIC[2];
+    buf[p++] = LOOP_MAGIC[3];
+
+    putU32(buf, p, _loopLen);
+
+    buf[p++] = _count & 0xFF;
+    buf[p++] = (_count >> 8) & 0xFF;
+
+    for (uint16_t i = 0; i < _count; i++)
+    {
+        const LoopEvent& e = _events[i];
+
+        putU32(buf, p, e.timeMs);
+
+        buf[p++] = e.note;
+        buf[p++] = e.velocity;
+        buf[p++] = e.instrument;
+        buf[p++] = e.channel;
+        buf[p++] = e.viaMidi ? 1 : 0;
+    }
+
+    return p;
+}
+
+bool LooperController::deserialize(const uint8_t* buf, size_t len)
+{
+    if (len < LOOP_HEADER)
+    {
+        return false;
+    }
+
+    if (buf[0] != LOOP_MAGIC[0] || buf[1] != LOOP_MAGIC[1] || buf[2] != LOOP_MAGIC[2] ||
+        buf[3] != LOOP_MAGIC[3])
+    {
+        return false; // falsches Format / falsche Version
+    }
+
+    uint32_t loopLen = getU32(buf, 4);
+    uint16_t count   = static_cast<uint16_t>(buf[8] | (buf[9] << 8));
+
+    if (loopLen < LOOP_MIN_MS || count == 0 || count > LOOP_MAX_EVENTS)
+    {
+        return false;
+    }
+
+    if (len < LOOP_HEADER + static_cast<size_t>(count) * LOOP_EVENT)
+    {
+        return false; // abgeschnitten
+    }
+
+    // Laufende Wiedergabe sauber beenden, dann den neuen Loop übernehmen
+    forceOffActive();
+
+    size_t p = LOOP_HEADER;
+
+    for (uint16_t i = 0; i < count; i++)
+    {
+        _events[i].timeMs = getU32(buf, p);
+        p += 4;
+        _events[i].note       = buf[p++];
+        _events[i].velocity   = buf[p++];
+        _events[i].instrument = buf[p++];
+        _events[i].channel    = buf[p++];
+        _events[i].viaMidi    = buf[p++] != 0;
+    }
+
+    _count     = count;
+    _loopLen   = loopLen;
+    _loopStart = millis();
+    _lastPos   = 0;
+
+    setState(PLAY, "Loop geladen");
+
+    return true;
+}

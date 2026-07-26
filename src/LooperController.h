@@ -51,6 +51,16 @@ public:
     // 2 = Aufnahme (Rec/Overdub)
     uint8_t displayState() const;
 
+    // Aktuellen Loop in einen Puffer serialisieren (für den
+    // Browser-Download). Gibt die Zahl geschriebener Bytes zurück
+    // (0 = kein Loop bzw. Puffer zu klein). Kompaktes Binärformat mit
+    // Magic + Version, damit alte Dateien erkannt werden.
+    size_t serialize(uint8_t* buf, size_t max) const;
+
+    // Einen zuvor exportierten Loop aus einem Puffer laden und
+    // abspielen. false bei ungültigem Format.
+    bool deserialize(const uint8_t* buf, size_t len);
+
 private:
     enum State : uint8_t
     {

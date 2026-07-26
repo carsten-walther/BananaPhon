@@ -24,6 +24,22 @@ public:
     using VoidFn     = std::function<void()>;
     using ProgressFn = std::function<void(uint8_t percent)>;
 
+    // Loop-Austausch über den Browser (siehe LooperController): save
+    // schreibt den aktuellen Loop in den Puffer und gibt die Länge
+    // zurück (0 = kein Loop), load lädt einen hochgeladenen Loop.
+    using LoopSaveFn = std::function<size_t(uint8_t* buf, size_t max)>;
+    using LoopLoadFn = std::function<bool(const uint8_t* buf, size_t len)>;
+
+    void onLoopSave(const LoopSaveFn& fn)
+    {
+        _onLoopSave = fn;
+    }
+
+    void onLoopLoad(const LoopLoadFn& fn)
+    {
+        _onLoopLoad = fn;
+    }
+
     // Callbacks für Ton/Anzeige — optional. Sie laufen im Kontext des
     // (blockierenden) Updates, nicht aus loop(): handle() bzw.
     // handleClient() kehren erst nach dem Update zurück, der
@@ -71,13 +87,22 @@ public:
     void handleWebUpload(); // Datei-Chunks in die Update-Partition
     void handleWebPost();   // Abschluss des POST /update
 
+    // Loop-Austausch (statische Handler nutzen diese)
+    void handleLoopDownload(); // GET /loop — aktuellen Loop senden
+    void handleLoopUpload();   // Datei-Chunks des Loop-Uploads sammeln
+    void handleLoopPost();     // Abschluss des POST /loop — Loop laden
+
 private:
     void startServices();
 
     VoidFn _onStart, _onEnd, _onError;
     ProgressFn _onProgress;
 
+    LoopSaveFn _onLoopSave;
+    LoopLoadFn _onLoopLoad;
+
     bool _started           = false;
     uint32_t _contentLength = 0;
     int16_t _lastPercent    = -1;
+    size_t _loopUpLen       = 0; // gesammelte Bytes beim Loop-Upload
 };

@@ -124,7 +124,9 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   sie fest), Velocity wird mitgeschnitten. Wiedergabe geht an dieselbe
   Senke wie beim Einspielen: am Lautsprecher **multitimbral** (ein
   Drum-Loop und Live-Piano klingen gleichzeitig), oder an einen
-  angeschlossenen MIDI-Synth/DAW
+  angeschlossenen MIDI-Synth/DAW. Loops lassen sich über die Browser-Seite
+  (dieselbe wie fürs OTA-Update) als Datei **herunterladen und wieder
+  hochladen** — zum Sichern oder Teilen
 
 ## Hardware
 
@@ -256,6 +258,24 @@ verstummt währenddessen, und das Gerät startet nach dem Update
 automatisch in die neue Firmware. Schlägt das Update fehl, bleibt die
 alte Firmware in der zweiten Partition erhalten (die Board-Standard-
 Partitionierung `default_16MB` hält zwei App-Slots bereit).
+
+### Loops austauschen
+
+Dieselbe Browser-Seite (http://bananaphon.local/) bietet unter
+**Loop-Austausch** zwei Dinge:
+
+- **Herunterladen** — der aktuell aufgenommene Loop wird als kompakte
+  Datei (`bananaphon.loop`, wenige KB) gespeichert. So lässt er sich
+  sichern oder weitergeben.
+- **Hochladen** — eine `.loop`-Datei auswählen; der Loop wird sofort
+  geladen und abgespielt (ersetzt den aktuellen). Die Datei enthält Note,
+  Velocity, Instrument und Senke je Event, klingt also exakt wie beim
+  Einspielen — auch multitimbral. Ein Versions-Kopf sorgt dafür, dass
+  Dateien aus einem anderen Format erkannt und abgelehnt werden.
+
+Der Austausch läuft direkt zwischen Browser und RAM — es wird nichts
+dauerhaft auf dem Gerät gespeichert (nach einem Neustart ist der Loop
+weg, sofern nicht heruntergeladen).
 
 ## Konfiguration
 

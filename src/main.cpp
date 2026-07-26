@@ -465,6 +465,15 @@ void setup()
                 displayCtrl.showOtaScreen("Fehler - Abbruch", -1, 0xF800);
             });
 
+        // Loop-Austausch über den Browser: Download serialisiert den
+        // aktuellen Loop, Upload lädt einen und spielt ihn ab
+        if (ENABLE_LOOPER)
+        {
+            ota.onLoopSave([](uint8_t* buf, size_t max) { return looper.serialize(buf, max); });
+            ota.onLoopLoad([](const uint8_t* buf, size_t len)
+                           { return looper.deserialize(buf, len); });
+        }
+
         ota.begin();
     }
 

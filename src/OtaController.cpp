@@ -1,5 +1,7 @@
 #include "OtaController.h"
 
+#include <cstring>
+
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <ArduinoOTA.h>
@@ -16,33 +18,50 @@ static WebServer otaServer(OTA_WEB_PORT);
 // für die Prozentanzeige beim Upload (Bytes bisher / Gesamtgröße).
 static const char* OTA_HEADERS[] = {"Content-Length"};
 
+// Puffer für den Loop-Austausch (Serialisierung: 10 Byte Kopf + 9 Byte
+// je Event; siehe LooperController). Wird für Download und Upload genutzt.
+static uint8_t loopBuf[16 + LOOP_MAX_EVENTS * 9];
+
 // Upload-Seite: dunkel, bananengelber Akzent, deutsch. Der Fortschritt
 // kommt clientseitig aus XMLHttpRequest.upload — so bleibt die Seite
 // beim Neustart des Geräts nicht mit einem Verbindungsfehler stehen.
 static const char OTA_PAGE[] PROGMEM = R"HTML(<!doctype html><html lang=de><head>
 <meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>BananaPhon OTA</title><style>
+<title>BananaPhon</title><style>
 body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:2rem;text-align:center}
-h1{color:#ffd400;margin:.2rem}p{color:#bbb}
-form{margin:2rem 0}input[type=file]{color:#eee;margin:1rem 0}
+h1{color:#ffd400;margin:.2rem}h2{color:#ffd400;font-size:1.1rem;margin-top:2.5rem}p{color:#bbb}
+a{color:#ffd400}
+form{margin:1rem 0}input[type=file]{color:#eee;margin:1rem 0}
 button{background:#ffd400;border:0;padding:.7rem 1.4rem;border-radius:6px;font-size:1rem;cursor:pointer}
 progress{width:100%;height:1.2rem;margin-top:1rem}
-.hint{color:#777;font-size:.8rem;margin-top:2rem}#s{margin-top:.6rem;color:#ffd400}
+.hint{color:#777;font-size:.8rem;margin-top:.5rem}#s,#ls{margin-top:.6rem;color:#ffd400}
 </style></head><body>
-<h1>BananaPhon</h1><p>Firmware-Update</p>
+<h1>BananaPhon</h1>
+<h2>Firmware-Update</h2>
 <form id=f method=POST action=/update enctype=multipart/form-data>
 <input type=file name=firmware accept=.bin required><br>
 <button type=submit>Hochladen &amp; Flashen</button></form>
 <progress id=p value=0 max=100 hidden></progress><div id=s></div>
-<p class=hint>Datei: .pio/build/&lt;env&gt;/firmware.bin<br>Das Gerät startet nach dem Update neu.</p>
+<p class=hint>Datei: .pio/build/&lt;env&gt;/firmware.bin — das Gerät startet nach dem Update neu.</p>
+<h2>Loop-Austausch</h2>
+<p><a href=/loop download=bananaphon.loop>Aktuellen Loop herunterladen</a></p>
+<form id=lf method=POST action=/loop enctype=multipart/form-data>
+<input type=file name=loop accept=.loop required><br>
+<button type=submit>Loop hochladen &amp; abspielen</button></form>
+<div id=ls></div>
+<p class=hint>Der geladene Loop startet sofort und ersetzt den aktuellen.</p>
 <script>
-var f=document.getElementById('f'),p=document.getElementById('p'),s=document.getElementById('s');
-f.onsubmit=function(e){e.preventDefault();var x=new XMLHttpRequest();x.open('POST','/update');
-p.hidden=false;x.upload.onprogress=function(ev){if(ev.lengthComputable){
-p.value=ev.loaded/ev.total*100;s.textContent=Math.round(p.value)+' %';}};
-x.onload=function(){s.textContent=x.status==200?'Fertig - Neustart ...':'Fehler: '+x.responseText;};
-x.onerror=function(){s.textContent='Verbindung verloren (evtl. Neustart)';};
-x.send(new FormData(f));};
+function $(i){return document.getElementById(i);}
+$('f').onsubmit=function(e){e.preventDefault();var x=new XMLHttpRequest();x.open('POST','/update');
+$('p').hidden=false;x.upload.onprogress=function(ev){if(ev.lengthComputable){
+$('p').value=ev.loaded/ev.total*100;$('s').textContent=Math.round($('p').value)+' %';}};
+x.onload=function(){$('s').textContent=x.status==200?'Fertig - Neustart ...':'Fehler: '+x.responseText;};
+x.onerror=function(){$('s').textContent='Verbindung verloren (evtl. Neustart)';};
+x.send(new FormData($('f')));};
+$('lf').onsubmit=function(e){e.preventDefault();var x=new XMLHttpRequest();x.open('POST','/loop');
+x.onload=function(){$('ls').textContent=x.status==200?'Loop geladen':'Fehler: '+x.responseText;};
+x.onerror=function(){$('ls').textContent='Verbindung verloren';};
+x.send(new FormData($('lf')));};
 </script></body></html>)HTML";
 
 // HTTP-Basic-Auth, falls ein OTA_PASSWORD gesetzt ist. Gibt false zurück
@@ -107,6 +126,12 @@ void OtaController::startServices()
     otaServer.on("/update", HTTP_GET, sendPage);
     otaServer.on(
         "/update", HTTP_POST, [] { self->handleWebPost(); }, [] { self->handleWebUpload(); });
+
+    // Loop-Austausch: GET lädt den aktuellen Loop herunter, POST lädt
+    // einen hoch (nur wenn ein Save/Load-Callback verdrahtet ist)
+    otaServer.on("/loop", HTTP_GET, [] { self->handleLoopDownload(); });
+    otaServer.on(
+        "/loop", HTTP_POST, [] { self->handleLoopPost(); }, [] { self->handleLoopUpload(); });
 
     otaServer.begin();
 
@@ -271,4 +296,70 @@ void OtaController::handleWebPost()
 
         ESP.restart();
     }
+}
+
+// ------------------------------------------------
+// Loop-Austausch
+// ------------------------------------------------
+
+void OtaController::handleLoopDownload()
+{
+    if (!authOk())
+    {
+        return;
+    }
+
+    size_t n = _onLoopSave ? _onLoopSave(loopBuf, sizeof(loopBuf)) : 0;
+
+    if (n == 0)
+    {
+        otaServer.send(204, "text/plain", "Kein Loop aufgenommen");
+
+        return;
+    }
+
+    otaServer.sendHeader("Content-Disposition", "attachment; filename=bananaphon.loop");
+    otaServer.setContentLength(n);
+    otaServer.send(200, "application/octet-stream", "");
+    otaServer.sendContent(reinterpret_cast<const char*>(loopBuf), n);
+}
+
+void OtaController::handleLoopUpload()
+{
+    const HTTPUpload& up = otaServer.upload();
+
+    if (up.status == UPLOAD_FILE_START)
+    {
+        if (OTA_PASSWORD[0] != '\0' && !otaServer.authenticate("admin", OTA_PASSWORD))
+        {
+            return; // handleLoopPost fordert dann die Auth an
+        }
+
+        _loopUpLen = 0;
+    }
+    else if (up.status == UPLOAD_FILE_WRITE)
+    {
+        // In den Puffer sammeln; zu große Uploads (mehr als ein Loop
+        // fassen kann) werden abgeschnitten und beim Laden abgelehnt
+        if (_loopUpLen + up.currentSize <= sizeof(loopBuf))
+        {
+            memcpy(loopBuf + _loopUpLen, up.buf, up.currentSize);
+
+            _loopUpLen += up.currentSize;
+        }
+    }
+}
+
+void OtaController::handleLoopPost()
+{
+    if (OTA_PASSWORD[0] != '\0' && !otaServer.authenticate("admin", OTA_PASSWORD))
+    {
+        otaServer.requestAuthentication();
+
+        return;
+    }
+
+    bool ok = _onLoopLoad && _onLoopLoad(loopBuf, _loopUpLen);
+
+    otaServer.send(ok ? 200 : 400, "text/plain", ok ? "OK" : "Ungueltige Loop-Datei");
 }
