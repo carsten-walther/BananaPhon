@@ -98,6 +98,24 @@ Klangerzeuger für einen externen Sequencer. Die Infrastruktur dafür ist
 mit dem Synth komplett da, es fehlt nur die Empfangsseite im
 `MidiController`.
 
+Günstig (v1, empfohlen) — „BLE-Noten klingen über den Speaker"
+- ENABLE_MIDI_RECEIVE in Config; MidiController reicht einen Callback an midiOut.setRawMidiCallback durch; eine kleine Parse-Funktion (NoteOn/NoteOff → Speaker).
+- ~40–60 Zeilen, ~½ Sitzung. Der Parse-Teil ist per Simulation prüfbar; der echte Test braucht eine DAW über BLE.
+- Entscheidung nötig: Kanal ignorieren (alles auf dem aktuellen Instrument) — am einfachsten für v1.
+
+Moderat — „richtiger Klangerzeuger"
+- Kanal-bewusst: Kanal 10 → Drumkit, sonst Melodie-Instrument; All-Notes-Off bei Disconnect; optional Sustain-CC/Pitch-Bend; „MIDI IN"-Anzeige.
+- ~1 Sitzung.
+
+Teuer — der eigentliche Kostentreiber
+- Polyphonie: Der Synth hat genau 7 Stimmen (an NUM_SENSORS gekoppelt). Ein Sequencer mit Akkorden/Arps stiehlt schnell Stimmen. Mehr Polyphonie = echter Umbau der Voice-Verwaltung (RAM/CPU). Multitimbral (mehrere Instrumente gleichzeitig auf verschiedenen Kanälen) wäre nochmal deutlich mehr.
+
+Drei ehrliche Haken (unabhängig vom Umfang)
+
+1. 7 Stimmen — für Sequencer-Material knapp.
+2. MIDI-Thru-Echo: BLE ist bidirektional; hat die DAW „MIDI Thru" an, spielt das Gerät die eigenen Pad-Noten doppelt.
+3. RTP-Empfang liefe über einen anderen Pfad (AppleMIDI hat eigene Handler) — der Raw-Callback deckt BLE + USB ab, RTP bräuchte separate Verdrahtung. Für „BLE-Empfang" reicht v1.
+
 ## Bedienung & Anzeige
 
 **Weitere Menüpunkte** — Touch-Schwellen und Velocity-Kennlinie stecken
