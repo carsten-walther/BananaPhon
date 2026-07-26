@@ -23,7 +23,7 @@ constexpr bool ENABLE_USB_MIDI = false;
 constexpr char MIDI_DEVICE_NAME[] = "BananaPhon";
 
 // Firmware-Version (Splash-Screen); bei Releases mitziehen
-constexpr char FIRMWARE_VERSION[] = "2026.07.25";
+constexpr char FIRMWARE_VERSION[] = "2026.07.26";
 
 // WLAN-Setup-Portal: kommt WIFI_PORTAL_AFTER_MS nach dem Start keine
 // Verbindung zustande (oder ist WIFI_SSID in Credentials.h leer),
@@ -325,6 +325,39 @@ constexpr uint32_t DEEP_SLEEP_TIMEOUT_MS = 300000; // 5 Minuten
 // Loop-Task (Touch/MIDI/Display/Funk). Hängt einer länger als das
 // Timeout, startet das Gerät neu — die Bühnen-Versicherung.
 constexpr bool ENABLE_WATCHDOG = true;
+
+// ------------------------------------------------
+// Buttons & Looper
+// ------------------------------------------------
+//
+// Zwei Board-Buttons steuern den Looper: der Boot-Button (GPIO0) startet
+// Aufnahme/Overdub, der User-Button (GPIO14) stoppt/startet die
+// Wiedergabe (kurz) bzw. löscht den Loop (lang gedrückt). Beide sind
+// aktiv LOW mit internem Pull-up. Achtung: GPIO0 darf beim Einschalten
+// nicht gedrückt sein (sonst Download-Modus) — im Betrieb ist er ein
+// normaler Taster. GPIO14 muss im Gehäuse zugänglich sein.
+constexpr uint8_t PIN_BUTTON_BOOT = 0;
+constexpr uint8_t PIN_BUTTON_USER = 14;
+
+constexpr uint32_t BUTTON_DEBOUNCE_MS  = 30;
+constexpr uint32_t BUTTON_LONGPRESS_MS = 700;
+
+// Looper: nimmt das Live-Spiel auf und loopt es (freie Länge, Overdub).
+// Die Wiedergabe geht an dieselbe Senke wie beim Einspielen — am
+// Lautsprecher multitimbral (Drum-Loop + Live-Melodie gleichzeitig).
+constexpr bool ENABLE_LOOPER = true;
+
+// Maximale Zahl aufgenommener Note-Events (On+Off zählen einzeln). Bei
+// ~8 Byte je Event kostet 512 rund 4 KB RAM.
+constexpr uint16_t LOOP_MAX_EVENTS = 512;
+
+// Maximal gleichzeitig klingende Loop-Noten (für sicheres Abschalten am
+// Loop-Ende); darüber hinaus wird der älteste Eintrag verworfen.
+constexpr uint8_t LOOP_MAX_ACTIVE = 16;
+
+// Kürzeste sinnvolle Loop-Länge (schützt vor versehentlichem Doppel-
+// Tippen, das eine 0-ms-Schleife ergäbe)
+constexpr uint32_t LOOP_MIN_MS = 200;
 
 // ------------------------------------------------
 // Display

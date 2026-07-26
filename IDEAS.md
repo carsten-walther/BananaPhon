@@ -69,6 +69,15 @@ wo das Gerät herkommt.
   startet das Gerät bei einem Hänger neu (der Audio-Task wird explizit
   angemeldet, weil ein blockiertes I2S die Idle-Überwachung nicht
   auslöst; während OTA ist der Loop-Wächter abgemeldet).
+- **Looper** — nimmt das Live-Spiel auf (Note, Velocity, Instrument,
+  Senke) und loopt es; man überlagert Schicht für Schicht (erst Beat,
+  dann Melodie). Freie Länge (die erste Aufnahme legt sie fest), Overdub,
+  Bedienung über die zwei Board-Buttons (Boot = Rec/Overdub, User =
+  Stop/Start bzw. Clear lang). Wiedergabe an dieselbe Senke wie beim
+  Einspielen — am Lautsprecher multitimbral über getrennte Stimmen-Pools
+  (Drums 0..6, Melodie dahinter), sodass Drum-Loop und Live-Melodie
+  sauber nebeneinander klingen, ohne dass eine Kick die Melodie-Stimme
+  überschreibt (das knackte sonst).
 
 ## Klang & Musikalität (der größte Spielraum)
 
@@ -85,13 +94,6 @@ gespeicherte NVS-Werte gültig bleiben. Naheliegend: ein Bass (Sägezahn
 mit Filter-Hüllkurve) oder Pads/Strings.
 
 ### Weitere Kandidaten
-
-**Looper** — Encoder-Longpress startet die Aufnahme der gespielten
-Noten, danach loopt sie der Synth und man spielt darüber; das verwandelt
-das Gerät vom Instrument zur One-Person-Jam. Mit dem Drumkit als
-Grundlage besonders reizvoll: erst einen Beat einspielen, dann die
-Melodie darüber. Hierzu muss die Ausgabe am Display angepasst werden, 
-eher Richtung Drumm-Computer.
 
 **BLE-MIDI-Empfang** — die umgekehrte Richtung: das BananaPhon als
 Klangerzeuger für einen externen Sequencer. Die Infrastruktur dafür ist

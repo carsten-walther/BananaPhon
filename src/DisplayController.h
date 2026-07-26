@@ -52,7 +52,9 @@ public:
     // Aktualisiert die Statuszeile; zeichnet nur bei Änderung neu.
     // `portal` = WLAN-Setup-Portal aktiv, `speaker` = Standalone-
     // Betrieb über den Lautsprecher (kein MIDI-Ziel verbunden).
-    void showStatus(bool ble, bool wifi, bool rtp, bool portal = false, bool speaker = false);
+    // `looper`: 0 = aus/gestoppt, 1 = Wiedergabe, 2 = Aufnahme
+    void showStatus(bool ble, bool wifi, bool rtp, bool portal = false, bool speaker = false,
+                    uint8_t looper = 0);
 
     // Batterieanzeige oben rechts; zeichnet nur bei Änderung neu.
     // milliVolts: Batteriespannung (bereits mit Spannungsteiler
@@ -79,11 +81,12 @@ public:
     void powerOff();
 
 private:
-    bool _lastBle     = false;
-    bool _lastWifi    = false;
-    bool _lastRtp     = false;
-    bool _lastPortal  = false;
-    bool _lastSpeaker = false;
+    bool _lastBle       = false;
+    bool _lastWifi      = false;
+    bool _lastRtp       = false;
+    bool _lastPortal    = false;
+    bool _lastSpeaker   = false;
+    uint8_t _lastLooper = 0;
 
     bool _statusDrawn = false;
 

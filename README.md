@@ -99,7 +99,8 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   gerundet, mit Deko-Obertasten über den Fugen), Notennamen im
   unteren Tasten-Bereich, Status-Icons mittig in der oberen Leiste
   (Bluetooth, WLAN, Note für RTP, Zahnrad fürs Setup-Portal,
-  Lautsprecher für den Standalone-Betrieb), Batterieanzeige mit
+  Lautsprecher für den Standalone-Betrieb, Looper-Punkt: grau=aus,
+  grün=Wiedergabe, rot=Aufnahme), Batterieanzeige mit
   Ladestand bzw. USB-Erkennung — unter `BATTERY_WARN_PERCENT` (Default
   5 %) blinkt das Symbol als Warnung vor der Tiefentladung
 - **Deep Sleep nach Inaktivität**: nach 5 Minuten ohne Bedienung
@@ -113,6 +114,14 @@ Klaviatur, den Verbindungsstatus und den Batteriestand.
   hängt einer länger als das Timeout (z. B. ein totes I2S oder eine
   klemmende Funk-Bibliothek), startet das Gerät automatisch neu —
   Bühnen-Versicherung gegen eingefrorene Zustände
+- **Looper**: das Live-Spiel aufnehmen und als Schleife abspielen, Schicht
+  für Schicht überlagern (erst Beat, dann Melodie). Bedienung über zwei
+  Board-Buttons — **Boot** = Aufnahme/Overdub, **User** = Stop/Start
+  (kurz) bzw. Loop löschen (lang). Freie Länge (die erste Aufnahme legt
+  sie fest), Velocity wird mitgeschnitten. Wiedergabe geht an dieselbe
+  Senke wie beim Einspielen: am Lautsprecher **multitimbral** (ein
+  Drum-Loop und Live-Piano klingen gleichzeitig), oder an einen
+  angeschlossenen MIDI-Synth/DAW
 
 ## Hardware
 
@@ -151,12 +160,19 @@ Kanal 10 (siehe [`include/Drums.h`](include/Drums.h)).
 | 44   | Encoder A | — |
 | 18   | Encoder B (weckt aus Deep Sleep, RTC-fähig) | — |
 | 43   | Encoder SW (Taster) | — |
+| 0    | Boot-Button: Looper Aufnahme/Overdub | — |
+| 14   | User-Button: Looper Stop/Start bzw. Clear | — |
 
 Der MAX98357A braucht zusätzlich 5V und GND; der Gain-Pin kann offen
 bleiben (9 dB). Encoder-Taster gegen GND, Pull-ups sind intern gesetzt.
 GPIO 43/44 sind U0TXD/U0RXD — frei nutzbar, weil der serielle Monitor
 auf dem S3 über natives USB-CDC läuft. Die Rekalibrierung sitzt im Menü
 (**Calibrate**), nicht mehr auf einem Board-Button.
+
+Die beiden Board-Buttons steuern den Looper: **Boot** (GPIO 0) und
+**User** (GPIO 14), beide aktiv LOW mit internem Pull-up und im Gehäuse
+zugänglich. GPIO 0 darf beim Einschalten nicht gedrückt sein (sonst
+Download-Modus); im Betrieb ist er ein normaler Taster.
 
 Deep Sleep weckt über die Encoder-Dreh-Spur (GPIO 18): der S3 kann aus
 dem Deep Sleep nur über RTC-fähige Pins (GPIO 0–21) aufwachen — der
@@ -295,6 +311,10 @@ Alle Einstellungen liegen in [`include/Config.h`](include/Config.h):
 - Deep Sleep (`ENABLE_DEEP_SLEEP`, Inaktivitäts-Timeout
   `DEEP_SLEEP_TIMEOUT_MS`); Aufwecken durch Drehen des Encoders (die
   Rekalibrierung liegt im Menüpunkt **Calibrate**)
+- Looper (`ENABLE_LOOPER`, Event-Puffer `LOOP_MAX_EVENTS`, kürzeste
+  Loop-Länge `LOOP_MIN_MS`) und die beiden Board-Buttons
+  (`PIN_BUTTON_BOOT`, `PIN_BUTTON_USER`, `BUTTON_DEBOUNCE_MS`,
+  `BUTTON_LONGPRESS_MS`)
 
 Instrumentspezifisches liegt in [`include/Drums.h`](include/Drums.h):
 

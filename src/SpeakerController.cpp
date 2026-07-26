@@ -62,7 +62,17 @@ struct Voice
     float fmIndex     = 0.0f;
 };
 
-Voice voices[NUM_SENSORS];
+// Getrennte Stimmen-Pools: Die Drums belegen feste Stimmen nach
+// Pad-Index (0..NUM_SENSORS-1), die Melodie-Stimmen liegen dahinter
+// (NUM_SENSORS..NUM_VOICES-1). Ohne die Trennung würde beim Looper eine
+// Drum (z. B. die Kick auf jedem Schlag → voices[0]) eine Melodie-Stimme
+// mit demselben Index hart überschreiben — das knackte hörbar und kappte
+// die Melodie-Note. Getrennt klingen Drum-Loop und Live-Melodie sauber
+// nebeneinander (multitimbraler Looper).
+constexpr uint8_t MELODY_VOICES = 8;
+constexpr uint8_t NUM_VOICES    = NUM_SENSORS + MELODY_VOICES;
+
+Voice voices[NUM_VOICES];
 
 float attackPerSample  = 0.0f;
 float releasePerSample = 0.0f;
@@ -95,13 +105,14 @@ inline int16_t noiseSample()
 uint8_t arpMode         = 0;
 uint32_t arpStepSamples = 0;
 
-uint8_t arpIndex      = 0;
+uint8_t arpIndex      = NUM_SENSORS; // zeigt in den Melodie-Pool
 uint32_t arpCountdown = 0;
 bool arpAny           = false;
 
 // De-Klick-Blende pro Stimme beim Arp-Umschalten (lineare Rampe);
-// der Pro-Sample-Schritt wird in begin() aus der Abtastrate berechnet
-float arpGain[NUM_SENSORS] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+// der Pro-Sample-Schritt wird in begin() aus der Abtastrate berechnet.
+// In begin() auf 1.0 gefüllt.
+float arpGain[NUM_VOICES];
 
 constexpr float ARP_FADE_MS = 3.0f;
 
@@ -377,6 +388,14 @@ void startDrumVoice(Voice& v, uint8_t d, uint8_t velocity)
 constexpr float DRUM_HEADROOM   = 2.5f;
 constexpr float MELODY_HEADROOM = NUM_SENSORS * 1.5f;
 
+// Die Kopffreiheit wird pro Stimme angewandt (Drum-Stimmen mit dem
+// Drum-Faktor, Melodie-Stimmen mit dem Melodie-Faktor) statt global über
+// die Summe. Bei einem einzigen Instrument ist das identisch zu vorher;
+// beim Looper können Drums und Melodie gleichzeitig klingen und behalten
+// jeweils ihren richtigen Pegel.
+constexpr float DRUM_GAIN   = 1.0f / DRUM_HEADROOM;
+constexpr float MELODY_GAIN = 1.0f / MELODY_HEADROOM;
+
 // Dreieckwelle aus dem Phasen-Akkumulator (weicher als Rechteck)
 int16_t triangle(uint32_t phase)
 {
@@ -463,9 +482,11 @@ void audioTask(void*)
                 {
                     arpAny = false;
 
-                    for (uint8_t k = 1; k <= NUM_SENSORS; k++)
+                    // Nur im Melodie-Pool suchen — Drums haben kein Gate
+                    // und werden ohnehin nie arpeggiert
+                    for (uint8_t k = 1; k <= MELODY_VOICES; k++)
                     {
-                        uint8_t cand = (arpIndex + k) % NUM_SENSORS;
+                        uint8_t cand = NUM_SENSORS + ((arpIndex - NUM_SENSORS + k) % MELODY_VOICES);
 
                         if (voices[cand].gate)
                         {
@@ -596,7 +617,7 @@ void audioTask(void*)
                         s += (v.noiseHp ? (n - v.noiseState) : v.noiseState) * v.noiseMix;
                     }
 
-                    mix += s * v.amp * v.gain;
+                    mix += s * v.amp * v.gain * DRUM_GAIN;
 
                     continue;
                 }
@@ -629,7 +650,7 @@ void audioTask(void*)
 
                     uint32_t index = ((v.phase >> 22) + offset) & 1023u;
 
-                    mix += sineLut[index] * v.amp * arpGain[gainIndex] * v.pressure;
+                    mix += sineLut[index] * v.amp * arpGain[gainIndex] * v.pressure * MELODY_GAIN;
 
                     continue;
                 }
@@ -656,14 +677,13 @@ void audioTask(void*)
 
                 v.phase += v.step;
 
-                mix += oscSample(v.phase, activeWaveform) * v.amp * arpGain[gainIndex] * v.pressure;
+                mix += oscSample(v.phase, activeWaveform) * v.amp * arpGain[gainIndex] *
+                       v.pressure * MELODY_GAIN;
             }
 
-            // Auf ±1.0 normieren; Drums bekommen dabei deutlich mehr
-            // Pegel als die stapelbaren Melodie-Stimmen
-            float x =
-                mix * masterVolume /
-                ((activeInstrument == INST_DRUMS ? DRUM_HEADROOM : MELODY_HEADROOM) * 32768.0f);
+            // Auf ±1.0 normieren; die Kopffreiheit steckt schon pro
+            // Stimme im Mix (siehe DRUM_GAIN / MELODY_GAIN)
+            float x = mix * masterVolume / 32768.0f;
 
             // Effekt auf die Mix-Summe (vor der Sättigung, damit die
             // nasse Fahne dieselbe Begrenzung bekommt wie das Direktsignal)
@@ -748,6 +768,11 @@ void SpeakerController::begin()
         rvApLen[i] = rvScale(rvApTune[i]);
     }
 
+    for (uint8_t i = 0; i < NUM_VOICES; i++)
+    {
+        arpGain[i] = 1.0f;
+    }
+
     for (int i = 0; i < 1024; i++)
     {
         sineLut[i] = static_cast<int16_t>(sinf(i * 6.2831853f / 1024.0f) * 32000.0f);
@@ -782,8 +807,11 @@ void SpeakerController::begin()
     Serial.println("Lautsprecher bereit (I2S)");
 }
 
-// Startet eine Melodie-Stimme (Chip oder FM-Piano) auf `v`
-static void startMelodyVoice(Voice& v, uint8_t note, uint8_t velocity)
+// Startet eine Melodie-Stimme (Chip oder FM-Piano) auf `v`. Das
+// Instrument wird übergeben (nicht aus activeInstrument gelesen), damit
+// der Looper eine Note als ein anderes als das gerade aktive Instrument
+// spielen kann (Drums-Loop + Piano-Live gleichzeitig).
+static void startMelodyVoice(Voice& v, uint8_t note, uint8_t velocity, uint8_t instrument)
 {
     v.oneShot = false;
 
@@ -796,7 +824,7 @@ static void startMelodyVoice(Voice& v, uint8_t note, uint8_t velocity)
     // Aftertouch startet neutral — der Druck moduliert erst ab hier
     v.pressure = 1.0f;
 
-    v.fm = activeInstrument == INST_PIANO;
+    v.fm = instrument == INST_PIANO;
 
     if (v.fm)
     {
@@ -810,7 +838,12 @@ static void startMelodyVoice(Voice& v, uint8_t note, uint8_t velocity)
 
 void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
 {
-    if (activeInstrument == INST_DRUMS)
+    noteOnAs(activeInstrument, note, velocity);
+}
+
+void SpeakerController::noteOnAs(uint8_t instrument, uint8_t note, uint8_t velocity)
+{
+    if (instrument == INST_DRUMS)
     {
         // Drum-Index über die GM-Note finden; feste Stimme pro Drum
         // (Retrigger startet den Sound neu, wie bei einem Drumcomputer)
@@ -863,11 +896,15 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
         return; // unbekannte Note im Drum-Modus: ignorieren
     }
 
+    // Melodie belegt nur den Melodie-Pool (NUM_SENSORS..NUM_VOICES-1),
+    // damit Drums (fester Pad-Index) keine Melodie-Stimme überschreiben.
+
     // Gleiche Note erneut? Dann diese Stimme neu anschlagen.
-    for (auto& v : voices)
+    for (uint8_t i = NUM_SENSORS; i < NUM_VOICES; i++)
     {
+        Voice& v = voices[i];
+
         if (v.gate && v.note == note)
-        // cppcheck-suppress useStlAlgorithm
         {
             v.target = velocity / 127.0f;
 
@@ -882,31 +919,28 @@ void SpeakerController::noteOn(uint8_t note, uint8_t velocity)
     }
 
     // Sonst: freie (ausgeklungene) Stimme suchen …
-    for (auto& v : voices)
+    for (uint8_t i = NUM_SENSORS; i < NUM_VOICES; i++)
     {
-        if (!v.gate && v.amp <= 0.0f)
-        // cppcheck-suppress useStlAlgorithm
+        if (!voices[i].gate && voices[i].amp <= 0.0f)
         {
-            startMelodyVoice(v, note, velocity);
+            startMelodyVoice(voices[i], note, velocity, instrument);
 
             return;
         }
     }
 
-    // … oder die leiseste Stimme stehlen (bei 7 Pads und 7 Stimmen
-    // nur erreichbar, solange Releases noch ausklingen)
-    Voice* quietest = &voices[0];
+    // … oder die leiseste Melodie-Stimme stehlen
+    Voice* quietest = &voices[NUM_SENSORS];
 
-    for (auto& v : voices)
+    for (uint8_t i = NUM_SENSORS; i < NUM_VOICES; i++)
     {
-        if (v.amp < quietest->amp)
+        if (voices[i].amp < quietest->amp)
         {
-            // cppcheck-suppress useStlAlgorithm
-            quietest = &v;
+            quietest = &voices[i];
         }
     }
 
-    startMelodyVoice(*quietest, note, velocity);
+    startMelodyVoice(*quietest, note, velocity, instrument);
 }
 
 void SpeakerController::noteOff(uint8_t note)

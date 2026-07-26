@@ -243,6 +243,13 @@ static void drawSpeakerIcon(int32_t x, int32_t y, uint16_t color)
     display.fillArc(x + 8, y + 7, 5, 6, 300, 60, color);
 }
 
+// Looper: Punkt (Record-Symbol). Die Farbe kodiert den Zustand —
+// grau = aus/gestoppt, grün = Wiedergabe, rot = Aufnahme/Overdub.
+static void drawLooperIcon(int32_t x, int32_t y, uint16_t color)
+{
+    display.fillCircle(x + 7, y + 7, 5, color);
+}
+
 // Breite einer weißen Taste (aus der Displaybreite)
 static int32_t keyWidth()
 {
@@ -752,10 +759,11 @@ void DisplayController::updateBatteryWarning()
     renderBattery(_batBlinkOn);
 }
 
-void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, bool speaker)
+void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, bool speaker,
+                                   uint8_t looper)
 {
     if (_statusDrawn && ble == _lastBle && wifi == _lastWifi && rtp == _lastRtp &&
-        portal == _lastPortal && speaker == _lastSpeaker)
+        portal == _lastPortal && speaker == _lastSpeaker && looper == _lastLooper)
     {
         return;
     }
@@ -765,19 +773,25 @@ void DisplayController::showStatus(bool ble, bool wifi, bool rtp, bool portal, b
     _lastRtp     = rtp;
     _lastPortal  = portal;
     _lastSpeaker = speaker;
+    _lastLooper  = looper;
 
     _statusDrawn = true;
 
-    // Icon-Leiste horizontal zentriert in der oberen Zeile
-    int32_t iconsX = (display.width() - 5 * ICON_SLOT) / 2 + 20;
+    // Icon-Leiste horizontal zentriert in der oberen Zeile (sechs Icons)
+    int32_t iconsX = (display.width() - 6 * ICON_SLOT) / 2 + 20;
 
-    display.fillRect(iconsX - 2, ICON_Y - 2, 5 * ICON_SLOT + 4, 18, TFT_BLACK);
+    display.fillRect(iconsX - 2, ICON_Y - 2, 6 * ICON_SLOT + 4, 18, TFT_BLACK);
 
     drawBleIcon(iconsX + 0 * ICON_SLOT, ICON_Y, ble ? TFT_WHITE : TFT_DARKGREY);
     drawWifiIcon(iconsX + 1 * ICON_SLOT, ICON_Y, wifi ? TFT_WHITE : TFT_DARKGREY);
     drawRtpIcon(iconsX + 2 * ICON_SLOT, ICON_Y, rtp ? TFT_WHITE : TFT_DARKGREY);
     drawSetupIcon(iconsX + 3 * ICON_SLOT, ICON_Y, portal ? TFT_WHITE : TFT_DARKGREY);
     drawSpeakerIcon(iconsX + 4 * ICON_SLOT, ICON_Y, speaker ? TFT_WHITE : TFT_DARKGREY);
+
+    // Looper: grau = aus, grün = Wiedergabe, rot = Aufnahme
+    uint16_t loopColor = looper == 2 ? TFT_RED : (looper == 1 ? TFT_GREEN : TFT_DARKGREY);
+
+    drawLooperIcon(iconsX + 5 * ICON_SLOT, ICON_Y, loopColor);
 }
 
 // Geometrie des OTA-Fortschrittsbalkens (aus der Displaygröße abgeleitet)

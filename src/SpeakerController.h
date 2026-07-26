@@ -36,6 +36,11 @@ public:
     void noteOn(uint8_t note, uint8_t velocity);
     void noteOff(uint8_t note);
 
+    // Wie noteOn, aber spielt die Note als das angegebene Instrument
+    // (Instrument-Enum aus Drums.h) statt als das aktive — der Looper
+    // spielt so einen Drum-Loop und Live-Piano gleichzeitig.
+    void noteOnAs(uint8_t instrument, uint8_t note, uint8_t velocity);
+
     // Alle Stimmen ausklingen lassen — z. B. beim Wechsel in den
     // MIDI-Betrieb, damit nichts endlos weiterdudelt
     void allNotesOff();

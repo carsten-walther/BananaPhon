@@ -7,6 +7,7 @@
 
 #include "DisplayController.h"
 #include "EncoderController.h"
+#include "LooperController.h"
 #include "MenuController.h"
 #include "MidiController.h"
 #include "OtaController.h"
@@ -28,6 +29,69 @@ EncoderController encoder;
 MenuController menu;
 
 OtaController ota;
+
+LooperController looper;
+
+// ------------------------------------------------
+// Board-Button (aktiv LOW, interner Pull-up) mit Entprellung und
+// Longpress-Erkennung — für Boot- und User-Taster (siehe Config.h)
+// ------------------------------------------------
+enum ButtonEvent : uint8_t
+{
+    BTN_NONE = 0,
+    BTN_TAP, // kurzer Druck (beim Loslassen)
+    BTN_LONG // lang gehalten (einmalig, noch während des Haltens)
+};
+
+struct Button
+{
+    uint8_t pin;
+    bool pressed        = false;
+    uint32_t lastChange = 0;
+    uint32_t pressStart = 0;
+    bool longFired      = false;
+
+    void begin()
+    {
+        pinMode(pin, INPUT_PULLUP);
+    }
+
+    ButtonEvent poll()
+    {
+        bool raw     = digitalRead(pin) == LOW;
+        uint32_t now = millis();
+
+        if (raw != pressed && now - lastChange >= BUTTON_DEBOUNCE_MS)
+        {
+            lastChange = now;
+            pressed    = raw;
+
+            if (pressed)
+            {
+                pressStart = now;
+                longFired  = false;
+            }
+            else if (!longFired && now - pressStart < BUTTON_LONGPRESS_MS)
+            {
+                // Losgelassen ohne vorherigen Longpress = kurzer Tipp
+                return BTN_TAP;
+            }
+        }
+
+        // Longpress feuert einmal, während der Taster noch gehalten wird
+        if (pressed && !longFired && now - pressStart >= BUTTON_LONGPRESS_MS)
+        {
+            longFired = true;
+
+            return BTN_LONG;
+        }
+
+        return BTN_NONE;
+    }
+};
+
+Button bootButton{PIN_BUTTON_BOOT};
+Button userButton{PIN_BUTTON_USER};
 
 // Tatsächlich gespielte Note pro Pad (inkl. Oktav-Shift) — das
 // NoteOff muss exakt dieselbe Note treffen, auch wenn die Oktave
@@ -351,6 +415,14 @@ void setup()
 
     menu.begin(&speaker, &displayCtrl);
 
+    if (ENABLE_LOOPER)
+    {
+        bootButton.begin();
+        userButton.begin();
+
+        looper.begin(&speaker, &midi, &displayCtrl);
+    }
+
     // OTA: Während eines Updates den Ton stoppen und den Fortschritt
     // auf dem Display zeigen. Die Callbacks laufen im (blockierenden)
     // Update-Kontext, nicht aus loop() — nur von dort ist der Verlauf
@@ -465,6 +537,13 @@ void loop()
 
             displayCtrl.drawPad(i, true, sensors[i].velocity());
 
+            // Live-Spiel für den Looper mitschneiden (spielt separat live)
+            if (ENABLE_LOOPER)
+            {
+                looper.recordEvent(true, playedNote[i], sensors[i].velocity(),
+                                   Settings::instrument(), noteViaMidi[i], playedChannel[i]);
+            }
+
             // Tuning-Hilfe für TOUCH_VELOCITY_RATIO_MAX (siehe Config.h)
             Serial.print("NoteOn ");
             Serial.print(playedNote[i]);
@@ -485,6 +564,13 @@ void loop()
 
             displayCtrl.drawPad(i, false);
 
+            // NoteOff auch für den Looper mitschneiden
+            if (ENABLE_LOOPER)
+            {
+                looper.recordEvent(false, playedNote[i], 0, Settings::instrument(), noteViaMidi[i],
+                                   playedChannel[i]);
+            }
+
             // Zusammen mit den NoteOn-Zeilen zeigt das, ob eine
             // gehaltene Note zwischendurch abreißt (Retrigger)
             Serial.print("NoteOff ");
@@ -492,7 +578,42 @@ void loop()
         }
     }
 
+    // Board-Buttons: Boot = Rec/Overdub, User = Stop/Start (Tipp) bzw.
+    // Clear (lang). Ein laufender Loop hält das Gerät wach.
+    if (ENABLE_LOOPER)
+    {
+        if (bootButton.poll() == BTN_TAP)
+        {
+            looper.toggleRecord();
+            activity = true;
+        }
+
+        ButtonEvent u = userButton.poll();
+
+        if (u == BTN_TAP)
+        {
+            looper.toggleStop();
+            activity = true;
+        }
+        else if (u == BTN_LONG)
+        {
+            looper.clear();
+            activity = true;
+        }
+
+        if (looper.active())
+        {
+            activity = true;
+        }
+    }
+
     midi.update();
+
+    // Looper: fällige Loop-Events abspielen (getaktet im Loop-Rhythmus)
+    if (ENABLE_LOOPER)
+    {
+        looper.update();
+    }
 
     // OTA: Dienste bei WLAN-Verbindung starten und beide Update-Wege
     // bedienen. Läuft ein Update, blockiert dieser Aufruf bis zum
@@ -570,7 +691,8 @@ void loop()
         lastStatusUpdate = millis();
 
         displayCtrl.showStatus(midi.bleConnected(), midi.wifiConnected(), midi.rtpReady(),
-                               midi.setupPortalActive(), ENABLE_SPEAKER && !midiActive());
+                               midi.setupPortalActive(), ENABLE_SPEAKER && !midiActive(),
+                               ENABLE_LOOPER ? looper.displayState() : 0);
     }
 
     // Batterieanzeige in größeren Abständen aktualisieren
