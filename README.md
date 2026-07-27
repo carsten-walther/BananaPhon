@@ -273,9 +273,32 @@ Dieselbe Browser-Seite (http://bananaphon.local/) bietet unter
   Einspielen — auch multitimbral. Ein Versions-Kopf sorgt dafür, dass
   Dateien aus einem anderen Format erkannt und abgelehnt werden.
 
-Der Austausch läuft direkt zwischen Browser und RAM — es wird nichts
-dauerhaft auf dem Gerät gespeichert (nach einem Neustart ist der Loop
-weg, sofern nicht heruntergeladen).
+Der Austausch läuft direkt zwischen Browser und RAM — der aktuelle Loop
+lebt nur im Arbeitsspeicher. Dauerhaft ablegen lässt er sich über das
+Menü (siehe unten) oder per Download.
+
+### Loops auf dem Gerät speichern
+
+Loops lassen sich direkt auf dem BananaPhon ablegen und wieder abrufen —
+sie überleben Neustart und Deep Sleep. Dafür sorgt ein LittleFS-Dateisystem
+auf der 3,4 MB großen `spiffs`-Partition. Im Menü am Rotary-Encoder:
+
+- **Save** — sichert den aktuell aufgenommenen Loop unter dem nächsten
+  freien Namen (`loop1`, `loop2`, …). Das Display bestätigt mit dem
+  vergebenen Namen.
+- **Load** — im Bearbeiten-Modus (Klick) durch die gespeicherten Loops
+  drehen und mit einem weiteren Klick laden; der Loop startet sofort.
+
+Die drei mitgelieferten Demo-Loops liegen als `.loop`-Dateien in
+[`data/`](data/) und landen einmalig per
+
+```
+pio run -t uploadfs
+```
+
+auf dem Gerät (bzw. `pio run -e lilygo-t-display-s3-ota -t uploadfs` über
+WLAN). Sie tauchen danach unter **Load** auf. Das Format ist identisch mit
+dem Browser-Austausch, die Dateien sind also untereinander kompatibel.
 
 ## Konfiguration
 
@@ -378,8 +401,10 @@ src/SpeakerController.*     Standalone-Synth über I2S (MAX98357A)
 src/EncoderController.*     Rotary-Encoder (PCNT-Quadraturzähler)
 src/MenuController.*        Settings-Menü (Encoder-Bedienung)
 src/LooperController.*      Looper (Aufnahme/Wiedergabe, multitimbral)
+src/LoopStore.*             Loops auf dem Gerät (LittleFS, Save/Load)
 src/Settings.*              persistente Einstellungen (NVS)
 src/DisplayController.*     Panel-Konfiguration und UI
+data/                       mitgelieferte Demo-Loops (pio run -t uploadfs)
 scripts/format.py           Format-Target und compiledb-Hook
 KLANGERZEUGUNG.md           wie die Instrumente ihren Klang erzeugen
 IDEAS.md                    offene Ideen / Roadmap

@@ -359,6 +359,10 @@ constexpr uint8_t LOOP_MAX_ACTIVE = 16;
 // Tippen, das eine 0-ms-Schleife ergäbe)
 constexpr uint32_t LOOP_MIN_MS = 200;
 
+// Maximale Zahl auf dem Gerät gespeicherter Loops, die das Menü listet
+// (LittleFS, siehe LoopStore). Reicht für die Demos plus eigene.
+constexpr uint8_t LOOP_STORE_MAX = 16;
+
 // ------------------------------------------------
 // Display
 // ------------------------------------------------

@@ -29,6 +29,12 @@ public:
     // die eigentliche Kalibrierung aus (sie braucht Sensoren und MIDI).
     bool takeCalibrateRequest();
 
+    // Hat der Nutzer „Save" bzw. „Load" ausgelöst? Geben je einmal true
+    // zurück (Flag wird gelöscht). Bei Load liefert index den gewählten
+    // Loop. main.cpp führt die Datei-Ein/Ausgabe aus (braucht den Looper).
+    bool takeSaveRequest();
+    bool takeLoadRequest(uint8_t& index);
+
 private:
     void show();
     void applyVolume(int32_t detents);
@@ -46,6 +52,12 @@ private:
     uint32_t _saveAt = 0;
 
     bool _calibrateRequested = false;
+
+    // Loop speichern/laden (von main.cpp abgeholt); _loadIndex ist der im
+    // Load-Menü ausgewählte Eintrag.
+    bool _saveRequested = false;
+    bool _loadRequested = false;
+    uint8_t _loadIndex  = 0;
 
     // Werkseinstellungen: erst nach einer zweiten Drehung ausführen
     bool _resetArmed = false;

@@ -8,6 +8,7 @@
 #include "DisplayController.h"
 #include "EncoderController.h"
 #include "LooperController.h"
+#include "LoopStore.h"
 #include "MenuController.h"
 #include "MidiController.h"
 #include "OtaController.h"
@@ -462,6 +463,10 @@ void setup()
 
         // Loop-Wiedergabe lässt die passenden Pads aufleuchten
         looper.onVisual(looperVisual);
+
+        // Gespeicherte Loops (LittleFS) verfügbar machen — die Demo-Loops
+        // aus data/ und im Betrieb gesicherte Loops fürs Menü (Save/Load)
+        LoopStore::begin();
     }
 
     // OTA: Während eines Updates den Ton stoppen und den Fortschritt
@@ -733,6 +738,32 @@ void loop()
     if (menu.takeCalibrateRequest())
     {
         recalibrateSensors();
+    }
+
+    // Loop im Menü gespeichert/geladen (LittleFS; überlebt Neustart/Sleep)
+    if (menu.takeSaveRequest())
+    {
+        size_t n = looper.serialize(LoopStore::buffer(), LoopStore::bufferSize());
+
+        const char* saved = n ? LoopStore::saveNext(n) : nullptr;
+
+        displayCtrl.showToast(saved ? saved : "Nichts zu sichern");
+    }
+
+    uint8_t loadIndex = 0;
+
+    if (menu.takeLoadRequest(loadIndex))
+    {
+        size_t n = LoopStore::read(loadIndex);
+
+        if (n && looper.deserialize(LoopStore::buffer(), n))
+        {
+            displayCtrl.showToast(LoopStore::name(loadIndex));
+        }
+        else
+        {
+            displayCtrl.showToast("Laden fehlgeschlagen");
+        }
     }
 
     // Statuszeile höchstens alle 500 ms prüfen

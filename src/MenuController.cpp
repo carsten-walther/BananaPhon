@@ -5,6 +5,7 @@
 #include "Config.h"
 #include "DisplayController.h"
 #include "Drums.h"
+#include "LoopStore.h"
 #include "Scales.h"
 #include "Settings.h"
 #include "SpeakerController.h"
@@ -20,6 +21,8 @@ enum Item : uint8_t
     ITEM_SCALE,
     ITEM_OCTAVE,
     ITEM_MIDI,
+    ITEM_SAVE, // aktuellen Loop auf dem Gerät sichern
+    ITEM_LOAD, // gespeicherten Loop laden (Drehen wählt aus)
     ITEM_CALIBRATE,
     ITEM_RESET,
 
@@ -69,6 +72,21 @@ void MenuController::show()
 
     case ITEM_MIDI:
         snprintf(body, sizeof(body), "MIDI: %s", Settings::midi() ? "On" : "Off");
+        break;
+
+    case ITEM_SAVE:
+        snprintf(body, sizeof(body), "Save Loop");
+        break;
+
+    case ITEM_LOAD:
+        if (LoopStore::count() == 0)
+        {
+            snprintf(body, sizeof(body), "Load: (leer)");
+        }
+        else
+        {
+            snprintf(body, sizeof(body), "Load: %s", LoopStore::name(_loadIndex));
+        }
         break;
 
     case ITEM_CALIBRATE:
@@ -149,6 +167,17 @@ void MenuController::handleClick()
 
     if (_editing)
     {
+        // ITEM_LOAD: der Klick im Bearbeiten-Modus lädt den gewählten
+        // Loop (main.cpp führt es aus, es braucht Looper + LoopStore)
+        if (_item == ITEM_LOAD)
+        {
+            _loadRequested = true;
+
+            _open = false;
+
+            return;
+        }
+
         // Bearbeiten beenden — zurück zum Blättern
         _editing = false;
 
@@ -160,6 +189,34 @@ void MenuController::handleClick()
     // Blätter-Modus: Klick auf den aktuellen Eintrag
     switch (_item)
     {
+    case ITEM_SAVE:
+        // Aktion: aktuellen Loop sichern (main.cpp serialisiert + schreibt)
+        _saveRequested = true;
+
+        _open = false;
+
+        return;
+
+    case ITEM_LOAD:
+        // In den Bearbeiten-Modus zum Auswählen (nur wenn etwas da ist)
+        if (LoopStore::count() == 0)
+        {
+            _open = false;
+
+            return;
+        }
+
+        if (_loadIndex >= LoopStore::count())
+        {
+            _loadIndex = 0;
+        }
+
+        _editing = true;
+
+        show();
+
+        return;
+
     case ITEM_CALIBRATE:
         // Aktion: Kalibrierung anfordern und Menü schließen — main.cpp
         // führt sie aus und übernimmt danach das Display
@@ -234,6 +291,28 @@ void MenuController::handleRotation(int32_t detents)
 
         // Wegblättern von „Factory Reset" entschärft die Rückfrage
         _resetArmed = false;
+
+        show();
+
+        return;
+    }
+
+    // ITEM_LOAD: Drehen wählt einen gespeicherten Loop aus (kein Wert)
+    if (_item == ITEM_LOAD)
+    {
+        uint8_t n = LoopStore::count();
+
+        if (n > 0)
+        {
+            int32_t sel = (static_cast<int32_t>(_loadIndex) + detents) % n;
+
+            if (sel < 0)
+            {
+                sel += n;
+            }
+
+            _loadIndex = static_cast<uint8_t>(sel);
+        }
 
         show();
 
@@ -406,6 +485,29 @@ bool MenuController::takeCalibrateRequest()
     bool r = _calibrateRequested;
 
     _calibrateRequested = false;
+
+    return r;
+}
+
+bool MenuController::takeSaveRequest()
+{
+    bool r = _saveRequested;
+
+    _saveRequested = false;
+
+    return r;
+}
+
+bool MenuController::takeLoadRequest(uint8_t& index)
+{
+    bool r = _loadRequested;
+
+    _loadRequested = false;
+
+    if (r)
+    {
+        index = _loadIndex;
+    }
 
     return r;
 }
