@@ -37,6 +37,12 @@ struct Voice
     float noiseState   = 0.0f;  // Filterzustand (erster Pol)
     float noiseState2  = 0.0f;  // zweiter Pol (nur Hochpass-Drums: HiHats/Clap)
 
+    // Zweiter, fester Ton-Teilton (nur Snare): eine höhere Fell-Resonanz
+    // neben dem fallenden Grundton — gibt dem Fell seinen Doppelklang/Ring
+    uint32_t tone2Phase = 0;
+    uint32_t tone2Step  = 0;
+    float toneMix2      = 0.0f;
+
     // Mehrfach-Anschlag (Clap): so lange burstsLeft > 0 ist, wird die
     // Stimme alle burstSamples neu angeschlagen und klingt dazwischen
     // mit burstDecay ab; danach übernimmt der normale ampDecay-Tail.
@@ -61,6 +67,12 @@ struct Voice
     bool fm           = false;
     uint32_t modPhase = 0;
     float fmIndex     = 0.0f;
+
+    // Tonhöhenabhängiges, zweistufiges Ausklingen (pro Stimme aus der
+    // Note berechnet): schneller Abfall direkt nach dem Anschlag, danach
+    // der lange Nachklang. Höhere Töne klingen insgesamt kürzer.
+    float fmDecayFast = 1.0f;
+    float fmDecaySlow = 1.0f;
 
     // Zweiter, leicht verstimmter Träger für Schwebung/Breite (Chorus),
     // damit das Piano weniger statisch-synthetisch klingt
@@ -165,6 +177,26 @@ float decayPerSample(float ms)
     return ms > 0.0f ? powf(0.001f, 1000.0f / (ms * SPEAKER_SAMPLE_RATE)) : 0.0f;
 }
 
+// Tonhöhenabhängige Ausklingzeit des Pianos: am Referenzton die volle
+// PIANO_DECAY_MS, je PIANO_DECAY_KEY_SEMIS Halbtöne nach oben halbiert,
+// begrenzt auf [PIANO_DECAY_MIN_MS, PIANO_DECAY_MAX_MS]
+float pianoDecayMsForNote(uint8_t note)
+{
+    float ms = PIANO_DECAY_MS *
+               exp2f((static_cast<int>(PIANO_DECAY_REF_NOTE) - note) / PIANO_DECAY_KEY_SEMIS);
+
+    if (ms < PIANO_DECAY_MIN_MS)
+    {
+        ms = PIANO_DECAY_MIN_MS;
+    }
+    else if (ms > PIANO_DECAY_MAX_MS)
+    {
+        ms = PIANO_DECAY_MAX_MS;
+    }
+
+    return ms;
+}
+
 // Ein-Pol-Filterkoeffizient für eine Eckfrequenz in Hz
 float onePoleCoeff(float hz)
 {
@@ -172,8 +204,8 @@ float onePoleCoeff(float hz)
 }
 
 // Zur Laufzeit aus den ms-Angaben in Drums.h berechnete Faktoren
-// (begin() füllt sie, bevor der Audio-Task startet)
-float pianoDecay      = 1.0f;
+// (begin() füllt sie, bevor der Audio-Task startet). Das Ausklingen des
+// Pianos ist tonhöhenabhängig und liegt deshalb pro Stimme (fmDecay*).
 float pianoRelease    = 1.0f;
 float pianoIndexDecay = 1.0f;
 float drumChokeDecay  = 1.0f;
@@ -366,6 +398,11 @@ void startDrumVoice(Voice& v, uint8_t d, uint8_t velocity)
     v.gain        = spec.gain;
     v.noiseState  = 0.0f;
     v.noiseState2 = 0.0f;
+
+    // Zweiter Ton-Teilton (nur wenn im Rezept gesetzt, z. B. Snare)
+    v.toneMix2   = spec.toneMix2;
+    v.tone2Step  = spec.freq2 > 0.0f ? stepForFreq(spec.freq2) : 0;
+    v.tone2Phase = 0;
 
     // Härter angeschlagene Felle klingen heller: die Schlagstärke
     // öffnet den Rausch-Tiefpass (skaliert die Eckfrequenz). Beim
@@ -616,6 +653,16 @@ void audioTask(void*)
                         s += sineLut[v.phase >> 22] * v.toneMix;
                     }
 
+                    // Zweiter, fester Teilton (Snare): läuft ohne Sweep
+                    // neben dem fallenden Grundton — die zwei Resonanzen
+                    // geben dem Fell seinen Ring statt eines hohlen Tons
+                    if (v.toneMix2 > 0.0f)
+                    {
+                        v.tone2Phase += v.tone2Step;
+
+                        s += sineLut[v.tone2Phase >> 22] * v.toneMix2;
+                    }
+
                     if (v.noiseMix > 0.0f)
                     {
                         int16_t n = noiseSample();
@@ -653,9 +700,20 @@ void audioTask(void*)
 
                 if (v.fm)
                 {
-                    // FM-E-Piano: exponentielles Ausklingen — lang bei
-                    // gehaltener Taste, schneller nach dem Loslassen
-                    v.amp *= v.gate ? pianoDecay : pianoRelease;
+                    // FM-E-Piano: zweistufiges Ausklingen bei gehaltener
+                    // Taste — zunächst rasch (die „Blüte" nach dem
+                    // Hammerschlag, oberhalb des Knees), danach der lange,
+                    // tonhöhenabhängige Nachklang. Nach dem Loslassen das
+                    // schnellere Release.
+                    if (v.gate)
+                    {
+                        v.amp *=
+                            v.amp > v.target * PIANO_DECAY_KNEE ? v.fmDecayFast : v.fmDecaySlow;
+                    }
+                    else
+                    {
+                        v.amp *= pianoRelease;
+                    }
 
                     if (v.amp < 0.001f)
                     {
@@ -789,7 +847,6 @@ void SpeakerController::begin()
 
     // ms-Angaben aus Drums.h in Pro-Sample-Faktoren umrechnen — vor
     // dem Start des Audio-Tasks, der sie liest
-    pianoDecay      = decayPerSample(PIANO_DECAY_MS);
     pianoRelease    = decayPerSample(PIANO_RELEASE_MS);
     pianoIndexDecay = expf(-1000.0f / (PIANO_INDEX_DECAY_MS * SPEAKER_SAMPLE_RATE));
     drumChokeDecay  = decayPerSample(DRUM_CHOKE_MS);
@@ -874,6 +931,13 @@ static void startMelodyVoice(Voice& v, uint8_t note, uint8_t velocity, uint8_t i
         v.modPhase = 0;
         v.phase2   = 0; // zweiter Träger startet in Phase, driftet dann
         v.fmIndex  = pianoStartIndex(velocity);
+
+        // Tonhöhenabhängiges Ausklingen: hohe Töne kürzer als tiefe. Der
+        // schnelle Abschnitt der Blüte ist nie länger als der Nachklang.
+        float slowMs = pianoDecayMsForNote(note);
+
+        v.fmDecaySlow = decayPerSample(slowMs);
+        v.fmDecayFast = decayPerSample(slowMs < PIANO_DECAY_FAST_MS ? slowMs : PIANO_DECAY_FAST_MS);
     }
 }
 

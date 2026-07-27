@@ -67,9 +67,19 @@ Ablese-Phase des **Trägers** in der Sinustabelle (Phasenmodulation).
   Start-Index (`PIANO_VEL_INDEX_MIN` 0.35 = Anteil bei Velocity 0), nicht
   nur die Lautstärke — ein satter Hammerschlag klingt obertonreicher.
 - **Amplitude**: perkussiver Einsatz (sofort auf Zielamplitude, Sinus
-  startet bei Phase 0 → kein Klick), dann langes Ausklingen
-  `PIANO_DECAY_MS` (2000 ms) bei gehaltener Taste, schnelleres Release
-  `PIANO_RELEASE_MS` (150 ms) nach dem Loslassen.
+  startet bei Phase 0 → kein Klick), dann **zweistufiges Ausklingen** bei
+  gehaltener Taste — erst rasch (`PIANO_DECAY_FAST_MS` 600 ms, die „Blüte"
+  direkt nach dem Hammerschlag, solange die Amplitude über
+  `PIANO_DECAY_KNEE` = 50 % liegt), danach der lange Nachklang. Release
+  nach dem Loslassen schneller (`PIANO_RELEASE_MS` 150 ms).
+- **Tonhöhenabhängiges Ausklingen**: wie bei echten Saiten klingen tiefe
+  Töne lange, hohe kurz. Die Nachklangzeit gilt am Referenzton
+  `PIANO_DECAY_REF_NOTE` (c1) mit `PIANO_DECAY_MS` (2200 ms) und halbiert
+  sich je `PIANO_DECAY_KEY_SEMIS` (21) Halbtöne nach oben, begrenzt auf
+  `PIANO_DECAY_MIN_MS`…`PIANO_DECAY_MAX_MS` (350 ms…7 s). So klingt ein
+  Basston ~6 s, ein hoher Ton unter 1 s — ohne das wirkt jeder Ton gleich
+  lang und dadurch mechanisch. Die Faktoren liegen pro Stimme (aus der
+  Note berechnet), nicht global.
 - **Wärme gegen den synthetischen Klang** (reines FM klingt perfekt-
   harmonisch und statisch):
   - `PIANO_MOD_DETUNE` (0.02) macht den Modulator leicht **inharmonisch**
@@ -88,7 +98,12 @@ Sieben One-Shot-Stimmen im 808-Stil, eine feste pro Pad. Jede Drum ist
 
 - **Ton-Anteil**: Sinus mit `freq`, dessen Tonhöhe exponentiell in
   `sweepMs` auf `pitchFloor` fällt (der „Punch"). Der Sockel verhindert,
-  dass die Tonhöhe gegen 0 Hz wegläuft und die Drum verstummt.
+  dass die Tonhöhe gegen 0 Hz wegläuft und die Drum verstummt. Die
+  **Snare** hat zusätzlich einen zweiten, festen Teilton (`freq2`,
+  `toneMix2`): ein echtes Fell hat zwei dominante Resonanzen — der höhere,
+  nicht mitschwingende Teilton (330 Hz) schwebt gegen den fallenden
+  Grundton (190 Hz) und gibt den charakteristischen „Ring" statt eines
+  hohlen Einzeltons.
 - **Rausch-Anteil**: **weißes Rauschen per xorshift32** (mehrstufig,
   weich — das frühere 1-Bit-Rauschen klang mit Crest-Faktor 1.0 blechern).
   Gefiltert entweder als **1-poliger Tiefpass** (Snare, Toms) oder als
@@ -112,12 +127,14 @@ Aktuelle Rezepte (GM-Note auf MIDI-Kanal 10 in Klammern):
 | Pad | Drum | GM | freq→floor / sweep | decay | Ton/Rausch | Rauschfilter |
 |-----|------|----|--------------------|-------|------------|--------------|
 | KD | Kick | 36 | 170→50 Hz / 50 ms | 320 ms | 1.00 / 0.00 | — |
-| SN | Snare | 38 | 190→180 Hz / 4 ms | 140 ms | 0.45 / 0.90 | TP 1250 Hz |
+| SN | Snare | 38 | 190→180 Hz / 4 ms | 140 ms | 0.38+0.25* / 0.90 | TP 1250 Hz |
 | HH | HiHat zu | 42 | nur Rauschen | 70 ms | 0.00 / 1.00 | HP 3200 Hz, würgt OH |
 | OH | HiHat offen | 46 | nur Rauschen | 350 ms | 0.00 / 0.80 | HP 2800 Hz |
 | T1 | Tom tief | 45 | 105→80 Hz / 60 ms | 250 ms | 1.00 / 0.06 | TP 1000 Hz |
 | T2 | Tom hoch | 50 | 160→120 Hz / 60 ms | 250 ms | 1.00 / 0.06 | TP 1000 Hz |
 | CP | Clap | 39 | nur Rauschen | 160 ms | 0.00 / 0.95 | HP 1250 Hz, 3 Bursts |
+
+\* Snare-Ton = Grundton 190 Hz (0.38) + fester Teilton 330 Hz (0.25).
 
 ## Ausdruck & Modulation
 
